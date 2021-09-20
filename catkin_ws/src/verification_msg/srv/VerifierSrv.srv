@@ -1,0 +1,5 @@
+float32[] init_set
+float32[] plan
+int64 idx
+---
+int64 res
