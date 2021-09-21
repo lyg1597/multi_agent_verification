@@ -3,3 +3,4 @@ float32[] plan
 int64 idx
 ---
 int64 res
+int64 idx

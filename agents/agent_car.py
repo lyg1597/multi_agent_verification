@@ -10,16 +10,17 @@ except:
     from Waypoint import Waypoint
 import matplotlib.pyplot as plt
 import time 
-from verifier_interface import verifier
+# from verifier_interface import verifier
 import rospy
 
 from verification_msg.msg import StateVisualizeMsg
+from verification_msg.srv import VerifierSrv, VerifierSrvResponse
 
 class AgentCar:
     def __init__(self, idx: int, waypoints: List[Waypoint], init_set: List[float]):
         self.idx = idx
-        self.waypoint_list: List(Waypoint) = waypoints
-        self.init_set = init_set
+        self.waypoint_list: List[Waypoint] = waypoints
+        self.init_set: List[float] = init_set
         print(f'Publish states to /agent{self.idx}/state_visualize')
         self.state_publisher = rospy.Publisher(f'/agent{self.idx}/state_visualize', StateVisualizeMsg, queue_size=1)
 
@@ -308,13 +309,22 @@ class AgentCar:
     def transform_trace_from_virtual(self):
         pass
 
+    def verifier(self, idx, plan, init_set):
+        rospy.wait_for_service('verify')
+        verify = rospy.ServiceProxy('verify', VerifierSrv)
+        res = verify(init_set = init_set, plan = plan, idx = idx)
+        if res.res == 0:
+            return 'Unsafe'
+        else:
+            return 'Safe'
+
     def execute_plan(self):
         print(f'Running agent {self.idx}')
         curr_init_set = self.init_set 
         all_trace = []
         for i in range(len(self.waypoint_list)):
             current_plan = self.waypoint_list[i]
-            res = verifier(self.idx, current_plan, curr_init_set)
+            res = self.verifier(self.idx, current_plan.mode_parameters, curr_init_set)
             if res != 'Safe':
                 self.stop_agent()
                 return
