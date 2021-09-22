@@ -7,7 +7,7 @@ import subprocess
 # from src.PolyUtils import PolyUtils
 from typing import List
 import sys
-from dryvr.main import get_tube
+from dryvr.main import get_tube, get_tube_input
 from dryvr_utils.linked_node import LinkedNode
 
 class Waypoint:
@@ -103,7 +103,7 @@ def dryvr_parse(data):
 
 class DryVRUtils:
 
-    def __init__(self, variables_list: List[str], dryvr_path: str, dynamics_path:str, json_output_file: str, seed = 0):
+    def __init__(self, variables_list: List[str], dynamics_path:str, dryvr_path: str = "", json_output_file: str = "", seed = 0):
         self.variables_list = variables_list
         self.dryvr_path = dryvr_path
         self.json_output_file = json_output_file
@@ -111,6 +111,32 @@ class DryVRUtils:
         self.seed = seed
         #sys.path.insert(1, self.dryvr_path)
         #from main import main
+
+    def construct_mode_dryvr_input(self, initial_set: np.array, waypoint: List[float], time_horizon):
+        dryvr_vertex_list = []
+        dryvr_edge_list = []
+        dryvr_guards_list = []
+        dryvr_resets_list = []
+        dryvr_unsafeset_string = ""
+        dryvr_directory_string = self.dynamics_path # "examples/Linear3D"
+        print(self.dynamics_path)
+        dryvr_mode = str(waypoint)
+        dryvr_mode = dryvr_mode.replace(",", ";")
+        dryvr_vertex_list.append(dryvr_mode)
+        dryvr_variables_list = self.variables_list # change when we have more than one agent
+        dryvr_initset_list = initial_set
+        dryvr_timehorizon = time_horizon
+
+        dryvr_object = {
+            "vertex": dryvr_vertex_list,
+            "variables": dryvr_variables_list,
+            "initialSet": dryvr_initset_list,
+            "timeHorizon": dryvr_timehorizon,
+            "directory": dryvr_directory_string,
+            "seed": self.seed
+        }
+
+        return dryvr_object
 
     def  construct_mode_dryvr_input_file(self, initial_set: np.array, waypoint: Waypoint):
         dryvr_vertex_list = []
@@ -128,6 +154,7 @@ class DryVRUtils:
         dryvr_timehorizon = waypoint.time_bound
 
         # self.dryvr_path + "input/nondaginput/" +
+        # json_fn = 
         try:
             json_output = open(self.dryvr_path + "input/nondaginput/" + self.json_output_file, "w")
         except IOError:
@@ -153,6 +180,10 @@ class DryVRUtils:
                    }, json_output, indent=2)
         json_output.close()
 
+
+    def run_dryvr_input(self, dryvr_input):
+        result, traces = get_tube_input(dryvr_input)
+        return result, traces
 
     def run_dryvr(self):
         cur_folder_path = os.getcwd()

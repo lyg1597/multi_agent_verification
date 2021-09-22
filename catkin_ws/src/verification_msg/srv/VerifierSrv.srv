@@ -1,6 +1,9 @@
 float32[] init_set
 float32[] plan
+float32 time_horizon
 int64 idx
+string dynamics
+string[] variables_list
 ---
 int64 res
 int64 idx

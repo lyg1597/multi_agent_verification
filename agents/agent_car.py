@@ -4,15 +4,17 @@ import numpy as np
 import polytope as pc
 from typing import Optional, List, Tuple
 import math
+import matplotlib.pyplot as plt
+import time
+import os 
+# from verifier_interface import verifier
+
 try:
     from src.Waypoint import Waypoint
 except:
     from Waypoint import Waypoint
-import matplotlib.pyplot as plt
-import time 
-# from verifier_interface import verifier
-import rospy
 
+import rospy
 from verification_msg.msg import StateVisualizeMsg
 from verification_msg.srv import VerifierSrv, VerifierSrvResponse
 
@@ -312,7 +314,18 @@ class AgentCar:
     def verifier(self, idx, plan, init_set):
         rospy.wait_for_service('verify')
         verify = rospy.ServiceProxy('verify', VerifierSrv)
-        res = verify(init_set = init_set, plan = plan, idx = idx)
+        dynamics = os.getcwd() + "/agents/drivr_dynamics/NN_car_TR_noNN.py"
+        time_horizon = plan.time_bound
+        variables_list = ['x', 'y', 'theta']
+
+        res = verify(
+            init_set = init_set, 
+            plan = plan.mode_parameters, 
+            time_horizon = time_horizon,
+            idx = idx, 
+            dynamics = dynamics,
+            variables_list = variables_list
+        )
         if res.res == 0:
             return 'Unsafe'
         else:
@@ -324,7 +337,7 @@ class AgentCar:
         all_trace = []
         for i in range(len(self.waypoint_list)):
             current_plan = self.waypoint_list[i]
-            res = self.verifier(self.idx, current_plan.mode_parameters, curr_init_set)
+            res = self.verifier(self.idx, current_plan, curr_init_set)
             if res != 'Safe':
                 self.stop_agent()
                 return
@@ -399,3 +412,5 @@ if __name__ == "__main__":
     plt.plot(trace[:,0],trace[:,3])
     plt.plot(trace[:,0],trace[:,3], 'r.')
     plt.show()
+    # print(os.getcwd())
+    # print(os.path.realpath(__file__))
