@@ -9,9 +9,6 @@ class Model:
         self.importModelFunctions(directory_path)
         return
 
-    def importModelAbsPath(self, path: str) -> None:
-        sys.path.append(path)
-
     def importModelFunctions(self, path: str) -> None:
         """
         Load simulation function from given file path

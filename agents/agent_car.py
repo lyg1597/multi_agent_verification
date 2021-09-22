@@ -10,7 +10,7 @@ import os
 # from verifier_interface import verifier
 
 try:
-    from src.Waypoint import Waypoint
+    from common.Waypoint import Waypoint
 except:
     from Waypoint import Waypoint
 

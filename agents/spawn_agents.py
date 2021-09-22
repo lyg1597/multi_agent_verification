@@ -13,7 +13,7 @@ try:
 except:
     from agent_car import AgentCar
 try:
-    from src.Waypoint import Waypoint
+    from common.Waypoint import Waypoint
 except:
     from Waypoint import Waypoint
 

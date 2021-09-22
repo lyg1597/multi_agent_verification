@@ -1,5 +1,5 @@
 import numpy as np
-# from src.Waypoint import Waypoint
+# from common.Waypoint import Waypoint
 import json
 import os
 import subprocess

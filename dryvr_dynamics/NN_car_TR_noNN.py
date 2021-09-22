@@ -5,11 +5,11 @@ import polytope as pc
 from typing import Optional, List, Tuple
 import math
 try:
-    from src.Waypoint import Waypoint
+    from common.Waypoint import Waypoint
 except:
     from Waypoint import Waypoint
 import matplotlib.pyplot as plt
-from src.PolyUtils import PolyUtils
+# from src.PolyUtils import PolyUtils
 
 def dynamics(t, state, mode_parameters):
     v = mode_parameters[2]
