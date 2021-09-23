@@ -338,7 +338,14 @@ class AgentCar:
         all_trace = []
         for i in range(len(self.waypoint_list)):
             current_plan = self.waypoint_list[i]
-            res = self.verifier(idx = self.idx, plan = current_plan, init_set = [[curr_init_set[0]-1, curr_init_set[1]-1, curr_init_set[2]],[curr_init_set[0]+1, curr_init_set[1]+1, curr_init_set[2]+1]])
+            res = self.verifier(
+                idx = self.idx, 
+                plan = current_plan, 
+                init_set = [
+                    [curr_init_set[0]-1, curr_init_set[1]-1, curr_init_set[2]],
+                    [curr_init_set[0]+1, curr_init_set[1]+1, curr_init_set[2]]
+                ]
+            )
             if res != 'Safe':
                 self.stop_agent()
                 return
