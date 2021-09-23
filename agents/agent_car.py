@@ -314,12 +314,13 @@ class AgentCar:
     def verifier(self, idx, plan, init_set):
         rospy.wait_for_service('verify')
         verify = rospy.ServiceProxy('verify', VerifierSrv)
-        dynamics = os.getcwd() + "/agents/drivr_dynamics/NN_car_TR_noNN.py"
+        dynamics = "dryvr_dynamics/NN_car_TR_noNN"
         time_horizon = plan.time_bound
         variables_list = ['x', 'y', 'theta']
 
         res = verify(
-            init_set = init_set, 
+            init_set_lower = init_set[0], 
+            init_set_upper = init_set[1], 
             plan = plan.mode_parameters, 
             time_horizon = time_horizon,
             idx = idx, 
@@ -337,7 +338,7 @@ class AgentCar:
         all_trace = []
         for i in range(len(self.waypoint_list)):
             current_plan = self.waypoint_list[i]
-            res = self.verifier(self.idx, current_plan, curr_init_set)
+            res = self.verifier(idx = self.idx, plan = current_plan, init_set = [[curr_init_set[0]-1, curr_init_set[1]-1, curr_init_set[2]],[curr_init_set[0]+1, curr_init_set[1]+1, curr_init_set[2]+1]])
             if res != 'Safe':
                 self.stop_agent()
                 return

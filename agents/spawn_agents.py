@@ -72,7 +72,7 @@ class AgentData:
 if __name__ == "__main__":
     rospy.init_node('spawn_agents')
 
-    num_agents = 3
+    num_agents = 1
     
     wp1 = [
         Waypoint('follow_waypoint',[20.4142135623735, 0.4142135623721741, 20.4142135623735, 5.4142135623721668],3.0,0),

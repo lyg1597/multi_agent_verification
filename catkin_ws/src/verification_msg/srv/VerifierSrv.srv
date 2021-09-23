@@ -1,4 +1,5 @@
-float32[] init_set
+float32[] init_set_upper
+float32[] init_set_lower
 float32[] plan
 float32 time_horizon
 int64 idx

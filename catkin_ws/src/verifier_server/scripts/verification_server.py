@@ -18,7 +18,9 @@ class MultiAgentVerifier:
         self.curr_segments = {}
 
     def run_dryvr(self, params: VerifierSrv):
-        init_set = params.init_set
+        print(os.getcwd())
+
+        init_set = [params.init_set_upper, params.init_set_lower]
         plan = params.plan
         idx = params.idx
         agent_dynamics = params.dynamics
@@ -40,6 +42,8 @@ class MultiAgentVerifier:
     def verify(self, params: VerifierSrv):
         # init_set = params.init_set
         # plan = params.plan
+        print(os.getcwd())
+
         idx = params.idx
         # agent_dynamics = params.dynamics
         # variables_list = params.variables_list
@@ -64,12 +68,12 @@ if __name__ == "__main__":
     print(os.getcwd())
 
     verifier = MultiAgentVerifier()
-    params = VerifierSrv()
-    params.init_set = [[-1, -1, np.pi/2],[1, 1, np.pi/2]] 
-    params.plan = [0,0,0,5]
-    params.time_horizon = 5 
-    params.idx = 0, 
-    params.dynamics = 'dryvr_dynamics/NN_car_TR_noNN'
-    params.variables_list = ['x','y','theta']
-    verifier.verify(params)
-    # verifier.start_verifier_server()
+    # params = VerifierSrv()
+    # params.init_set = [[-1, -1, np.pi/2],[1, 1, np.pi/2]] 
+    # params.plan = [0,0,0,5]
+    # params.time_horizon = 5 
+    # params.idx = 0, 
+    # params.dynamics = 'dryvr_dynamics/NN_car_TR_noNN'
+    # params.variables_list = ['x','y','theta']
+    # verifier.verify(params)
+    verifier.start_verifier_server()
