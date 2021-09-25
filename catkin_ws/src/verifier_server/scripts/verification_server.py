@@ -8,10 +8,12 @@ from std_msgs.msg import MultiArrayDimension
 
 import rospy
 from verification_msg.msg import ReachtubeMsg
+import polytope as pc 
 
 import os 
 import numpy as np
 
+import threading 
 
 class TubeCache:
     def __init__(self):
@@ -22,10 +24,11 @@ class MultiAgentVerifier:
         self.cache = {}
         self.curr_segments = {}
         self.unsafeset_list = []
-        self.reachtube_publisher = rospy.Publisher('/verifier/reachtube', ReachtubeMsg, queue_size=1)
+        self.reachtube_publisher = rospy.Publisher('/verifier/reachtube', ReachtubeMsg, queue_size=10)
+        self.safety_checking_lock = threading.Lock()
 
     def run_dryvr(self, params: VerifierSrv):
-        print(os.getcwd())
+        # print(os.getcwd())
 
         init_set = [params.init_set_lower, params.init_set_upper]
         plan = params.plan
@@ -33,7 +36,7 @@ class MultiAgentVerifier:
         agent_dynamics = params.dynamics
         variables_list = params.variables_list
         time_horizon = params.time_horizon
-        print(init_set)
+        # print(init_set)
         dryvrutils = DryVRUtils(
             variables_list = variables_list, 
             dynamics_path = agent_dynamics, 
@@ -44,11 +47,11 @@ class MultiAgentVerifier:
             plan, 
             time_horizon
         )
-        print(dryvr_input)
+        # print(dryvr_input)
         tube, trace = dryvrutils.run_dryvr_input(dryvr_input) # (dryvr_path, json_output_file)
         return tube, trace
 
-    def check_static_obstacles(self, tube):
+    def check_static_safety(self, tube):
         return True
 
     def check_dynamic_safety(self, idx, plan, tube):
@@ -61,8 +64,8 @@ class MultiAgentVerifier:
                     continue
                 seg_safe = False
                 for i in range(10):
-                    bloated_tube = self.seg_bloat_tube(tube, i)
-                    bloated_other_tube = self.seg_bloat_tube(other_tube, i)
+                    bloated_tube = self.seg_bloat_tube(tube, i+1)
+                    bloated_other_tube = self.seg_bloat_tube(other_tube, i+1)
                     intersect = False
                     for rect in bloated_tube:
                         for other_rect in bloated_other_tube:
@@ -79,19 +82,40 @@ class MultiAgentVerifier:
 
         return True
 
-    def seg_bloat_tube(self, tube, segs):
-        return []
+    def seg_bloat_tube(self, tube, num_seg):
+        tube_length = len(tube)
+        dim = len(tube[0][0])
+        seg_length = int(tube_length/num_seg)+1
+        bloated_segs = []
+        for i in range(0, tube_length, seg_length):
+            tube_seg = np.array(tube[i:i+seg_length])
+            seg_max = []
+            seg_min = []
+            for j in range(dim):
+                var_max = np.amax(tube_seg[:,:,j])
+                var_min = np.amin(tube_seg[:,:,j])
+                seg_max.append(var_max)
+                seg_min.append(var_min)
+            bloated_segs.append([seg_min, seg_max])
+        return bloated_segs
 
     def check_intersection(self, rect1, rect2):
-        return False 
+        # print(rect1, rect2)
+        p1 = pc.box2poly(np.array(rect1).T)
+        p2 = pc.box2poly(np.array(rect2).T)
+        if pc.is_empty(pc.intersect(p1, p2)):
+            return False
+        else:
+            return True
 
     def verify(self, params: VerifierSrv):
         # init_set = params.init_set
         # plan = params.plan
-        print(os.getcwd())
 
+        self.safety_checking_lock.acquire(blocking=True)
         idx = params.idx
         plan = params.plan
+        print(idx, os.getcwd())
         # agent_dynamics = params.dynamics
         # variables_list = params.variables_list
         # time_horizon = params.time_horizon
@@ -100,17 +124,19 @@ class MultiAgentVerifier:
         tube, trace = self.run_dryvr(params)
         self.publish_reachtube(idx, tube, plan)
 
-        res = self.check_static_obstacles(tube)
+        res = self.check_static_safety(tube)
         if not res:
             return VerifierSrvResponse(0, idx)
  
         self.curr_segments[idx] = (plan, tube)
-        res = self.check_dynamic_safety(plan, tube)
+        res = self.check_dynamic_safety(idx, plan, tube)
+        self.safety_checking_lock.release()
         if not res:
             return VerifierSrvResponse(0, idx)
 
         # print(f"Verifying init set {init_set}, plan {plan}, for agent{idx}")
-        print(tube)
+        # print(tube)
+        print(idx, "verification finished")
         return VerifierSrvResponse(1, idx)
 
     def start_verifier_server(self):

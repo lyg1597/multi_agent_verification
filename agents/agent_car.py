@@ -24,7 +24,8 @@ class AgentCar:
         self.waypoint_list: List[Waypoint] = waypoints
         self.init_set: List[float] = init_set
         print(f'Publish states to /agent{self.idx}/state_visualize')
-        self.state_publisher = rospy.Publisher(f'/agent{self.idx}/state_visualize', StateVisualizeMsg, queue_size=1)
+        self.state_publisher = rospy.Publisher(f'/agent{self.idx}/state_visualize', StateVisualizeMsg, queue_size=10)
+        self.verification_time = []
 
     def dynamics(self, t, state, mode_parameters):
         v = mode_parameters[2]
@@ -338,6 +339,8 @@ class AgentCar:
         all_trace = []
         for i in range(len(self.waypoint_list)):
             current_plan = self.waypoint_list[i]
+            print(f'Start verifying plan for agent {self.idx}')
+            verifier_start = time.time()
             res = self.verifier(
                 idx = self.idx, 
                 plan = current_plan, 
@@ -346,7 +349,11 @@ class AgentCar:
                     [curr_init_set[0]+1, curr_init_set[1]+1, curr_init_set[2]]
                 ]
             )
+            self.verification_time.append(time.time() - verifier_start)
+            print(f'Done verifying plan for agent {self.idx}')
+
             if res != 'Safe':
+                print(f"agent{self.idx} plan unsafe")
                 self.stop_agent()
                 return
             
@@ -357,6 +364,7 @@ class AgentCar:
             all_trace += trace.tolist()
             curr_init_set = [trace[-1][1], trace[-1][2], trace[-1][3]]
 
+        print(f'Done agent{self.idx}', self.verification_time)
         return all_trace
 
     def stop_agent(self):
