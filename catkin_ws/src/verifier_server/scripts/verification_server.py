@@ -8,12 +8,13 @@ from std_msgs.msg import MultiArrayDimension
 
 import rospy
 from verification_msg.msg import ReachtubeMsg
-import polytope as pc 
 
+import polytope as pc 
+import time
 import os 
 import numpy as np
-
 import threading 
+
 
 class TubeCache:
     def __init__(self):
@@ -120,24 +121,28 @@ class MultiAgentVerifier:
         # variables_list = params.variables_list
         # time_horizon = params.time_horizon
         
-        
+        compute_reachtube_start = time.time()
         tube, trace = self.run_dryvr(params)
         self.publish_reachtube(idx, tube, plan)
+        compute_reachtube_time = time.time() - compute_reachtube_start
 
+        safety_checking_start = time.time()
         res = self.check_static_safety(tube)
         if not res:
-            return VerifierSrvResponse(0, idx)
+            safety_checking_time = time.time() - safety_checking_start
+            return VerifierSrvResponse(res = 0, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time)
  
         self.curr_segments[idx] = (plan, tube)
         res = self.check_dynamic_safety(idx, plan, tube)
         self.safety_checking_lock.release()
+        safety_checking_time = time.time() - safety_checking_start
         if not res:
-            return VerifierSrvResponse(0, idx)
+            return VerifierSrvResponse(res = 0, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time)
 
         # print(f"Verifying init set {init_set}, plan {plan}, for agent{idx}")
         # print(tube)
         print(idx, "verification finished")
-        return VerifierSrvResponse(1, idx)
+        return VerifierSrvResponse(res = 1, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time)
 
     def start_verifier_server(self):
         rospy.init_node('verifier_server')

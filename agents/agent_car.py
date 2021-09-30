@@ -16,6 +16,7 @@ except:
 
 import rospy
 from verification_msg.msg import StateVisualizeMsg
+from std_msgs.msg import Int64
 from verification_msg.srv import VerifierSrv, VerifierSrvResponse
 
 class AgentCar:
@@ -26,6 +27,9 @@ class AgentCar:
         print(f'Publish states to /agent{self.idx}/state_visualize')
         self.state_publisher = rospy.Publisher(f'/agent{self.idx}/state_visualize', StateVisualizeMsg, queue_size=10)
         self.verification_time = []
+        self.reachtube_time = []
+        self.safety_checking_time = []
+        # self.status_publisher = rospy.Publisher(f'/agent{self.idx}/status', Int64, queue_size=10)
 
     def dynamics(self, t, state, mode_parameters):
         v = mode_parameters[2]
@@ -328,6 +332,10 @@ class AgentCar:
             dynamics = dynamics,
             variables_list = variables_list
         )
+        reachtube_time = res.rt_time 
+        self.reachtube_time.append(reachtube_time)
+        safety_checking_time = res.sc_time 
+        self.safety_checking_time.append(safety_checking_time)
         if res.res == 0:
             return 'Unsafe'
         else:
@@ -364,7 +372,9 @@ class AgentCar:
             all_trace += trace.tolist()
             curr_init_set = [trace[-1][1], trace[-1][2], trace[-1][3]]
 
-        print(f'Done agent{self.idx}', self.verification_time)
+        print(f'Done agent{self.idx} Verification Time', self.verification_time)
+        print(f'Done agent{self.idx} Reachtube Time', self.reachtube_time)
+        print(f'Done agent{self.idx} Safety Checking Time', self.safety_checking_time)
         return all_trace
 
     def stop_agent(self):
