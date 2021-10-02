@@ -78,10 +78,10 @@ def run_simulation(init, parameters, time_bound, time_step):
     return trace
 
 
-def get_transform_information(waypoint: Waypoint) -> Tuple[np.array, float]:
-    mode: str = waypoint.mode
-    mode_parameters: Optional[List[float]] = waypoint.mode_parameters
-    time_bound = waypoint.time_bound
+def get_transform_information(waypoint: List[float]) -> Tuple[np.array, float]:
+    mode: str = "follow_waypoint"
+    mode_parameters: Optional[List[float]] = waypoint
+    # time_bound = waypoint.time_bound
     if mode != "follow_waypoint":
         raise NotImplementedError("haven't implemented modes other than follow waypoint for these dynamics")
     # old_center = prev_mode_parameters
@@ -144,8 +144,7 @@ def transform_poly_to_virtual(poly, transform_information):
     return  poly_out.rotation(i=0, j=1, theta=new_system_angle)
 
 
-def transform_mode_to_virtual(waypoint: Waypoint, transform_information):
-    point = waypoint.mode_parameters
+def transform_mode_to_virtual(point: List[float], transform_information):
     xs1 = point[0]  # x_i
     ys1 = point[1]  # y_i
     xd1 = point[2]
@@ -161,7 +160,8 @@ def transform_mode_to_virtual(waypoint: Waypoint, transform_information):
     ys2 = round(ys2)
     xd2 = round(xd2)
     yd2 = round(yd2)
-    return Waypoint(waypoint.mode, [xs2, ys2,  xd2, yd2], waypoint.time_bound, waypoint.id)
+    return [xs2, ys2,  xd2, yd2]
+    # return Waypoint(waypoint.mode, [xs2, ys2,  xd2, yd2], waypoint.time_bound, waypoint.id)
 
 
 def transform_poly_from_virtual(poly, transform_information):

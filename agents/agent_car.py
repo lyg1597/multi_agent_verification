@@ -29,6 +29,7 @@ class AgentCar:
         self.verification_time = []
         self.reachtube_time = []
         self.safety_checking_time = []
+        self.total_time = []
         # self.status_publisher = rospy.Publisher(f'/agent{self.idx}/status', Int64, queue_size=10)
 
     def dynamics(self, t, state, mode_parameters):
@@ -336,6 +337,8 @@ class AgentCar:
         self.reachtube_time.append(reachtube_time)
         safety_checking_time = res.sc_time 
         self.safety_checking_time.append(safety_checking_time)
+        tt_time = res.tt_time 
+        self.total_time.append(tt_time)
         if res.res == 0:
             return 'Unsafe'
         else:
@@ -374,7 +377,9 @@ class AgentCar:
 
         print(f'Done agent{self.idx} Verification Time', self.verification_time)
         print(f'Done agent{self.idx} Reachtube Time', self.reachtube_time)
-        print(f'Done agent{self.idx} Safety Checking Time', self.safety_checking_time)
+        print(f'Done agent{self.idx} SafetyChecking Time', self.safety_checking_time)
+        print(f'Done agent{self.idx} ServiceTotal Time', self.total_time)
+        
         return all_trace
 
     def stop_agent(self):

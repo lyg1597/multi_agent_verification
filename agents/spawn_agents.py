@@ -147,7 +147,7 @@ class AgentData:
 if __name__ == "__main__":
     rospy.init_node('spawn_agents')
 
-    num_agents = 3
+    num_agents = 1
     
     raw_wp_list = [
         [20.0, 5.0, 20.0, 10.0],

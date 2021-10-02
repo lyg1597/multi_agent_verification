@@ -10,3 +10,4 @@ int64 res
 int64 idx
 float32 rt_time
 float32 sc_time
+float32 tt_time
