@@ -20,7 +20,7 @@ from std_msgs.msg import Int64
 from verification_msg.srv import VerifierSrv, VerifierSrvResponse
 
 class AgentCar:
-    def __init__(self, idx: int, waypoints: List[Waypoint], init_set: List[float]):
+    def __init__(self, idx: int, waypoints: List[Waypoint], init_set: List[float], lock):
         self.idx = idx
         self.waypoint_list: List[Waypoint] = waypoints
         self.init_set: List[float] = init_set
@@ -30,6 +30,7 @@ class AgentCar:
         self.reachtube_time = []
         self.safety_checking_time = []
         self.total_time = []
+        self.safety_checking_lock = lock
         # self.status_publisher = rospy.Publisher(f'/agent{self.idx}/status', Int64, queue_size=10)
 
     def dynamics(self, t, state, mode_parameters):
@@ -104,23 +105,6 @@ class AgentCar:
         trace = np.array(trace)
         return trace
 
-    def get_transform_information(self, waypoint: Waypoint) -> Tuple[np.array, float]:
-        # mode: str = waypoint.mode
-        mode_parameters: Optional[List[float]] = waypoint.mode_parameters
-        # time_bound = waypoint.time_bound
-        if mode != "follow_waypoint":
-            raise NotImplementedError("haven't implemented modes other than follow waypoint for these dynamics")
-        # old_center = prev_mode_parameters
-        dot = (mode_parameters[2] - mode_parameters[0])
-        det = (mode_parameters[3] - mode_parameters[1])
-        dir_angle = math.atan2(det, dot)
-        # ref_vx = (mode_parameters[3] - mode_parameters[0]) / time_bound
-        # ref_vy = (mode_parameters[4] - mode_parameters[1]) / time_bound
-        translation_vector: np.array = np.zeros((3,))
-        translation_vector[:2] = -1 * np.array(mode_parameters[2:])
-        translation_vector[2] = -dir_angle
-        return translation_vector, -dir_angle
-
     # mode, initial_state, time_step, time_bound, x_d
     def TC_Simulate(self, Mode,initialCondition,time_bound):
         # print("TC simulate")
@@ -153,170 +137,6 @@ class AgentCar:
         trace = trace[:,0:4]
         return np.array(trace)
 
-    def transform_poly_to_virtual(self, poly, transform_information):
-        translation_vector, new_system_angle = transform_information
-        poly_out: pc.Polytope = poly.translation(translation_vector)
-        # box = PolyUtils.get_bounding_box(poly_out)
-        # poly_out = pc.box2poly(box.T)
-        return  poly_out.rotation(i=0, j=1, theta=new_system_angle)
-
-
-    def transform_mode_to_virtual(self, waypoint: Waypoint, transform_information):
-        point = waypoint.mode_parameters
-        xs1 = point[0]  # x_i
-        ys1 = point[1]  # y_i
-        xd1 = point[2]
-        yd1 = point[3]
-        translation_vector, sc = transform_information
-        x_n = translation_vector[0]
-        y_n = translation_vector[1]
-        xs2 = (xs1 + x_n) * math.cos(sc) - (ys1 + y_n) * math.sin(sc) # xs1 + x_n #
-        ys2 = (xs1 + x_n) * math.sin(sc) + (ys1 + y_n) * math.cos(sc) #  ys1 + y_n #
-        xd2 = (xd1 + x_n) * math.cos(sc) - (yd1 + y_n) * math.sin(sc) # xd1 + x_n #
-        yd2 = (xd1 + x_n) * math.sin(sc) + (yd1 + y_n) * math.cos(sc) # yd1 + y_n #
-        xs2 = round(xs2)
-        ys2 = round(ys2)
-        xd2 = round(xd2)
-        yd2 = round(yd2)
-        return Waypoint(waypoint.mode, [xs2, ys2,  xd2, yd2], waypoint.time_bound, waypoint.id)
-
-
-    def transform_poly_from_virtual(self, poly, transform_information):
-        new_system_angle = -1 * transform_information[1]
-        translation_vector = -1 * transform_information[0]
-        out_poly = poly.rotation(i=0, j=1, theta=new_system_angle)
-        return out_poly.translation(translation_vector)
-
-
-    def transform_mode_from_virtual(self, waypoint: Waypoint, transform_information):
-        point = waypoint.mode_parameters
-        sc = -1 * transform_information[1]
-        translation_vector = -1 * transform_information[0]
-        xs1 = point[0]  # x_i
-        ys1 = point[1]  # y_i
-        xd1 = point[3]
-        yd1 = point[4]
-        x_n = translation_vector[0]
-        y_n = translation_vector[1]
-        xs2 = (xs1) * math.cos(sc) - (ys1) * math.sin(sc) + x_n # xs1 + x_n #
-        ys2 = (xs1) * math.sin(sc) + (ys1) * math.cos(sc) + y_n # ys1 + y_n #
-        xd2 = (xd1) * math.cos(sc) - (yd1) * math.sin(sc) + x_n # xd1 + x_n #
-        yd2 = (xd1) * math.sin(sc) + (yd1) * math.cos(sc) + y_n # yd1 + y_n #
-        xs2 = round(xs2)
-        ys2 = round(ys2)
-        xd2 = round(xd2)
-        yd2 = round(yd2)
-        return Waypoint(waypoint.mode,[xs2, ys2, xd2, yd2], waypoint.time_bound, waypoint.id)
-
-
-    def transform_state_from_then_to_virtual_dryvr_string(self, point, transform_information_from, transform_information_to):
-        pass
-
-
-    def get_virtual_mode_parameters(self):
-        pass
-
-    def get_sherlock_parameters(self, mode_parameters: List[float], initial_set: np.array, time_step: float, time_bound: float,
-                                mode: str):
-        if mode != "follow_waypoint":
-            raise NotImplementedError("These quadrotor dynamics only support waypoint following mode")
-        num_nn_outputs = 1
-        num_nn_inputs = initial_set.shape[1]
-        num_vars = num_nn_inputs + num_nn_outputs
-        order = 4
-        nn_ctrl_file_path = "../systems_with_networks/Ex_Quadrotor/trial_controller_3"
-        hyper_params = [str(num_vars), str(time_step), str(time_bound), str(order), nn_ctrl_file_path, num_nn_inputs,
-                        num_nn_outputs]
-        cur_list: List[str] = hyper_params[:]
-        var_names: List[str] = ["t", "x", "y", "z"]
-        cur_list.extend(var_names[:num_vars])
-        ode_rhs = ["1"]
-        ode_rhs.extend([' + '.join([str(val) + " * (" + var_names[ind + 1] + ' - ' + "(" + str(mode_parameters[ind]) + "))"
-                                    for ind, val in enumerate(A_row)]) for A_row in A])
-        cur_list.extend(ode_rhs)
-        # time initset lowerbound
-        cur_list.append('0')
-        cur_list.extend([str(val) for val in initial_set[0, :]])
-        # time initset upperbound
-        cur_list.append('0')
-        cur_list.extend([str(val) for val in initial_set[1, :]])
-        return cur_list
-
-    def get_flowstar_parameters(self, mode_parameters: List[float], initial_set: np.array, time_step: float, time_bound: float, mode: str):
-        initial_condition = {'x':[-0.2,-0.2],
-                            'y':[-0.2,-0.2],
-                            'theta':[0,0],
-                            'xref':[0,0],
-                            'yref':[0,0],
-                            'thetaref':[0,0],
-                            't':[0,0]}
-
-        num_variables = initial_set.shape[1]
-        ref_vx = (mode_parameters[2] - mode_parameters[0]) / time_bound
-        ref_vy = (mode_parameters[3] - mode_parameters[1]) / time_bound
-        theta_ref = np.arctan2(mode_parameters[3] - mode_parameters[1], mode_parameters[2] - mode_parameters[0])
-        ref_v = np.sqrt(ref_vx**2 + ref_vy**2)
-        # Initial condition for verisig is ex,ey,ez,vx,vy,vz,x,y,z
-        initial_condition['x'][0] = initial_set[0,0]
-        initial_condition['x'][1] = initial_set[1,0]
-        initial_condition['y'][0] = initial_set[0,1]
-        initial_condition['y'][1] = initial_set[1,1]
-        initial_condition['theta'][0] = initial_set[0,2]
-        initial_condition['theta'][1] = initial_set[1,2]
-        initial_condition['xref'][0] = mode_parameters[0]
-        initial_condition['xref'][1] = mode_parameters[0]
-        initial_condition['yref'][0] = mode_parameters[1]
-        initial_condition['yref'][1] = mode_parameters[1]
-        initial_condition['thetaref'][0] = theta_ref
-        initial_condition['thetaref'][1] = theta_ref
-        initial_condition["t"][0] = 0
-        initial_condition["t"][1] = 0
-
-        dynamics_string = f"x' = ({ref_v}*cos(thetaref - theta) + 1*(cos(theta)*(xref-x) + sin(theta)*(yref-y)))*cos(theta)\n\
-        y' = ({ref_v}*cos(thetaref - theta) + 1*(cos(theta)*(xref-x) + sin(theta)*(yref-y)))*sin(theta)\n\
-        theta' = thetaref + {ref_v}*(10*(-sin(theta)*(xref-x) + cos(theta)*(yref-y))+10*sin(thetaref - theta))\n\
-        xref' = {ref_vx}\n\
-        yref' = {ref_vy}\n\
-        thetaref' = 0\n\
-        t' = 1\n"
-
-        model_string = f"continuous reachability\n\
-        {{\n\
-            state var x, y, theta, xref, yref, thetaref, t\n\n\
-            setting\n\
-            {{\n\
-                fixed steps {time_step}\n\
-                time {time_bound}\n\
-                remainder estimation 1e-2\n\
-                identity precondition\n\
-                gnuplot interval x,y\n\
-                adaptive orders {{min 4,max 100}}\n\
-                cutoff 1e-6\n\
-                precision 100\n\
-                output flowstar_tube\n\
-                print off\n\
-            }}\n\n\
-            nonpoly ode {{20}}\n\
-            {{\n\
-                {dynamics_string}\
-            }}\n\
-            init\n\
-            {{\n\
-                x in [{initial_condition['x'][0]},{initial_condition['x'][1]}]\n\
-                y in [{initial_condition['y'][0]},{initial_condition['y'][1]}]\n\
-                theta in [{initial_condition['theta'][0]},{initial_condition['theta'][1]}]\n\
-                xref in [{initial_condition['xref'][0]},{initial_condition['xref'][1]}]\n\
-                yref in [{initial_condition['yref'][0]},{initial_condition['yref'][1]}]\n\
-                thetaref in [{initial_condition['thetaref'][0]},{initial_condition['thetaref'][1]}]\n\
-                t in [{initial_condition['t'][0]},{initial_condition['t'][1]}]\n\
-            }}\n\
-        }}"
-
-        return [model_string,num_variables]
-
-    def transform_trace_from_virtual(self):
-        pass
-
     def verifier(self, idx, plan, init_set):
         rospy.wait_for_service('verify')
         verify = rospy.ServiceProxy('verify', VerifierSrv)
@@ -324,15 +144,17 @@ class AgentCar:
         time_horizon = plan.time_bound
         variables_list = ['x', 'y', 'theta']
 
+        self.safety_checking_lock.acquire(blocking=True)
         res = verify(
-            init_set_lower = init_set[0], 
-            init_set_upper = init_set[1], 
+            initset_lower = init_set[0], 
+            initset_upper = init_set[1], 
             plan = plan.mode_parameters, 
             time_horizon = time_horizon,
             idx = idx, 
             dynamics = dynamics,
             variables_list = variables_list
         )
+        self.safety_checking_lock.release()
         reachtube_time = res.rt_time 
         self.reachtube_time.append(reachtube_time)
         safety_checking_time = res.sc_time 
@@ -356,8 +178,8 @@ class AgentCar:
                 idx = self.idx, 
                 plan = current_plan, 
                 init_set = [
-                    [curr_init_set[0]-1, curr_init_set[1]-1, curr_init_set[2]],
-                    [curr_init_set[0]+1, curr_init_set[1]+1, curr_init_set[2]]
+                    [curr_init_set[0]-1, curr_init_set[1]-1, curr_init_set[2]-0.01],
+                    [curr_init_set[0]+1, curr_init_set[1]+1, curr_init_set[2]+0.01]
                 ]
             )
             self.verification_time.append(time.time() - verifier_start)
