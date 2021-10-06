@@ -442,16 +442,17 @@ class MultiAgentVerifier:
         #     tube = self.cache.get(init_set, plan)
         # else:
         compute_reachtube_start = time.time()
-        tube = self.run_dryvr(params)
+        tube, trace = self.run_dryvr(params)
             # self.cache.add(init_set, plan, tube)
-        self.publish_reachtube(idx, tube, plan)
+        self.publish_reachtube(idx, tube, plan, int(False))
         compute_reachtube_time = time.time() - compute_reachtube_start
 
         safety_checking_start = time.time()
         res = self.check_static_safety(tube)
+        res = True
         if not res:
             safety_checking_time = time.time() - safety_checking_start
-            return VerifierSrvResponse(res = 0, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time)
+            return VerifierSrvResponse(res = 0, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, from_cache = int(False))
  
         self.curr_segments[idx] = (plan, tube)
         res = self.check_dynamic_safety(idx, plan, tube)
@@ -459,13 +460,13 @@ class MultiAgentVerifier:
         safety_checking_time = time.time() - safety_checking_start
         if not res:
             tt_time = time.time() - total_time
-            return VerifierSrvResponse(res = 0, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, tt_time = tt_time)
+            return VerifierSrvResponse(res = 0, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, tt_time = tt_time, from_cache = int(False))
 
         # print(f"Verifying init set {init_set}, plan {plan}, for agent{idx}")
         # print(tube)
         print(idx, "verification finished")
         tt_time = time.time() - total_time
-        return VerifierSrvResponse(res = 1, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, tt_time = tt_time)
+        return VerifierSrvResponse(res = 1, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, tt_time = tt_time, from_cache = int(False))
 
     def process_unsafeset(self, params: UnsafeSetSrv):
         print("Unsafe set received")
@@ -491,15 +492,15 @@ class MultiAgentVerifier:
     def start_verifier_server(self):
         rospy.init_node('verifier_server')
         print(os.path.realpath(__file__))
-        verify_service = rospy.Service('verify', VerifierSrv, self.verify_cached)
+        verify_service = rospy.Service('verify', VerifierSrv, self.verify)
         print("Verification Server Started")
         unsafe_service = rospy.Service('set_unsafe', UnsafeSetSrv, self.process_unsafeset)
         rospy.spin()
     
     def publish_reachtube(self, idx, tube, plan, from_cache):
         msg = ReachtubeMsg()
-        msg.idx = idx
-        msg.from_cache = from_cache
+        msg.idx = int(idx)
+        msg.from_cache = int(from_cache)
         tmp = np.array(tube)
         tmp_shape = tmp.shape
         dim_list = []
