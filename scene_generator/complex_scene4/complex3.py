@@ -512,82 +512,83 @@ def problem():
                  (A_rect, b1_118)]
 
     #TODO: Create initial set
-    b0 = np.array([[-5.5], [6.5], [-41.5], [42.5]])
-    Theta = (A_rect, b0)
+    # b0 = np.array([[-5.5], [6.5], [-41.5], [42.5]])
+    # Theta = (A_rect, b0)
     #TODO: Create goal set
-    bg1 = np.array([[-15], [21], [-3], [9]])
-    bg2 = np.array([[-39], [45], [-3], [9]])
-    bg3 = np.array([[-87], [93], [-3], [9]])
-    bg4 = np.array([[-3], [9], [-15], [21]])
-    bg5 = np.array([[-63], [69], [-27], [33]])
-    bg6 = np.array([[-39], [45], [-39], [45]])
-    bg7 = np.array([[-27], [33], [-63], [69]])
-    bg8 = np.array([[-63], [69], [-63], [69]])
-    bg9 = np.array([[-3], [9], [-87], [93]])
-    bg10 = np.array([[-87], [93], [-87], [93]])
-    bg11 = np.array([[-111], [117], [-3], [9]])
-    bg12 = np.array([[-111], [117], [-39], [45]])
-    bg13 = np.array([[-111], [117], [-75], [81]])
-    bg14 = np.array([[-3], [9], [-111], [117]])
-    bg15 = np.array([[-39], [45], [-111], [117]])
-    bg16 = np.array([[-75], [81], [-111], [117]])
-    bg17 = np.array([[-111], [117], [-111], [117]])
+    b_init1 = np.array([[-15], [21], [-3], [9]])
+    b_init2 = np.array([[-39], [45], [-3], [9]])
+    b_init3 = np.array([[-87], [93], [-3], [9]])
+    b_init4 = np.array([[-3], [9], [-15], [21]])
+    b_init5 = np.array([[-63], [69], [-27], [33]])
+    b_init6 = np.array([[-39], [45], [-39], [45]])
+    b_init7 = np.array([[-27], [33], [-63], [69]])
+    b_init8 = np.array([[-63], [69], [-63], [69]])
+    b_init9 = np.array([[-3], [9], [-87], [93]])
+    b_init10 = np.array([[-87], [93], [-87], [93]])
+    b_init11 = np.array([[-111], [117], [-3], [9]])
+    b_init12 = np.array([[-111], [117], [-39], [45]])
+    b_init13 = np.array([[-111], [117], [-75], [81]])
+    b_init14 = np.array([[-3], [9], [-111], [117]])
+    b_init15 = np.array([[-39], [45], [-111], [117]])
+    b_init16 = np.array([[-75], [81], [-111], [117]])
+    b_init17 = np.array([[-111], [117], [-111], [117]])
 
-    bg1_1 = np.array([[-120-15],  [120+21], [-3], [9]])
-    bg1_2 = np.array([[-120-39],  [120+45], [-3], [9]])
-    bg1_3 = np.array([[-120-87],  [120+93], [-3], [9]])
-    bg1_4 = np.array([[-120-3],   [120+9], [-15], [21]])
-    bg1_5 = np.array([[-120-63],  [120+69], [-27], [33]])
-    bg1_6 = np.array([[-120-39],  [120+45], [-39], [45]])
-    bg1_7 = np.array([[-120-27],  [120+33], [-63], [69]])
-    bg1_8 = np.array([[-120-63],  [120+69], [-63], [69]])
-    bg1_9 = np.array([[-120-3],   [120+9], [-87], [93]])
-    bg1_10 = np.array([[-120-87],  [120+93], [-87], [93]])
-    bg1_11 = np.array([[-120-111], [120+117], [-3], [9]])
-    bg1_12 = np.array([[-120-111], [120+117], [-39], [45]])
-    bg1_13 = np.array([[-120-111], [120+117], [-75], [81]])
-    bg1_14 = np.array([[-120-3],   [120+9], [-111], [117]])
-    bg1_15 = np.array([[-120-39],  [120+45], [-111], [117]])
-    bg1_16 = np.array([[-120-75],  [120+81], [-111], [117]])
-    bg1_17 = np.array([[-120-111], [120+117], [-111], [117]])
-    goal = [(A_rect, bg1),
-            (A_rect, bg2),
-            (A_rect, bg3),
-            (A_rect, bg4),
-            (A_rect, bg5),
-            (A_rect, bg6),
-            (A_rect, bg7),
-            (A_rect, bg8),
-            (A_rect, bg9),
-            (A_rect, bg10),
-            (A_rect, bg11),
-            (A_rect, bg12),
-            (A_rect, bg13),
-            (A_rect, bg14),
-            (A_rect, bg15),
-            (A_rect, bg16),
-            (A_rect, bg17),
-            (A_rect, bg1_1),
-            (A_rect, bg1_2),
-            (A_rect, bg1_3),
-            (A_rect, bg1_4),
-            (A_rect, bg1_5),
-            (A_rect, bg1_6),
-            (A_rect, bg1_7),
-            (A_rect, bg1_8),
-            (A_rect, bg1_9),
-            (A_rect, bg1_10),
-            (A_rect, bg1_11),
-            (A_rect, bg1_12),
-            (A_rect, bg1_13),
-            (A_rect, bg1_14),
-            (A_rect, bg1_15),
-            (A_rect, bg1_16),
-            (A_rect, bg1_17)]
-    return obstacles , Theta, goal
+    b_goal1 = np.array([[-120-15],  [120+21], [-3], [9]])
+    b_goal2 = np.array([[-120-39],  [120+45], [-3], [9]])
+    b_goal3 = np.array([[-120-87],  [120+93], [-3], [9]])
+    b_goal4 = np.array([[-120-3],   [120+9], [-15], [21]])
+    b_goal5 = np.array([[-120-63],  [120+69], [-27], [33]])
+    b_goal6 = np.array([[-120-39],  [120+45], [-39], [45]])
+    b_goal7 = np.array([[-120-27],  [120+33], [-63], [69]])
+    b_goal8 = np.array([[-120-63],  [120+69], [-63], [69]])
+    b_goal9 = np.array([[-120-3],   [120+9], [-87], [93]])
+    b_goal10 = np.array([[-120-87],  [120+93], [-87], [93]])
+    b_goal11 = np.array([[-120-111], [120+117], [-3], [9]])
+    b_goal12 = np.array([[-120-111], [120+117], [-39], [45]])
+    b_goal13 = np.array([[-120-111], [120+117], [-75], [81]])
+    b_goal14 = np.array([[-120-3],   [120+9], [-111], [117]])
+    b_goal15 = np.array([[-120-39],  [120+45], [-111], [117]])
+    b_goal16 = np.array([[-120-75],  [120+81], [-111], [117]])
+    b_goal17 = np.array([[-120-111], [120+117], [-111], [117]])
+    inits = [(A_rect, b_init1),
+            (A_rect, b_init2),
+            (A_rect, b_init3),
+            (A_rect, b_init4),
+            (A_rect, b_init5),
+            (A_rect, b_init6),
+            (A_rect, b_init7),
+            (A_rect, b_init8),
+            (A_rect, b_init9),
+            (A_rect, b_init10),
+            (A_rect, b_init11),
+            (A_rect, b_init12),
+            (A_rect, b_init13),
+            (A_rect, b_init14),
+            (A_rect, b_init15),
+            (A_rect, b_init16),
+            (A_rect, b_init17)]
+
+    goals = [(A_rect, b_goal1),
+            (A_rect, b_goal2),
+            (A_rect, b_goal3),
+            (A_rect, b_goal4),
+            (A_rect, b_goal5),
+            (A_rect, b_goal6),
+            (A_rect, b_goal7),
+            (A_rect, b_goal8),
+            (A_rect, b_goal9),
+            (A_rect, b_goal10),
+            (A_rect, b_goal11),
+            (A_rect, b_goal12),
+            (A_rect, b_goal13),
+            (A_rect, b_goal14),
+            (A_rect, b_goal15),
+            (A_rect, b_goal16),
+            (A_rect, b_goal17)]
+    return obstacles , inits, goals
 
 if __name__ == '__main__':
-    obs, Theta, goal = problem()
+    obs, inits, goal = problem()
 
     for A,b in obs:
         ppm.polygon.plot_polygon(ppm.duality.compute_polytope_vertices(A,b), color = 'red')
@@ -595,7 +596,8 @@ if __name__ == '__main__':
     for A,b in goal:
         ppm.polygon.plot_polygon(ppm.duality.compute_polytope_vertices(A,b), color = 'green')
 
-    ppm.polygon.plot_polygon(ppm.duality.compute_polytope_vertices(Theta[0],Theta[1]), color = 'blue')
+    for A,b in inits:
+        ppm.polygon.plot_polygon(ppm.duality.compute_polytope_vertices(A,b), color = 'blue')
     plt.xlim(0, 240)
     plt.ylim(0, 120)
     plt.grid()

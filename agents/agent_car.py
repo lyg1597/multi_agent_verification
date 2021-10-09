@@ -15,23 +15,26 @@ except:
     from Waypoint import Waypoint
 
 import rospy
-from verification_msg.msg import StateVisualizeMsg
+from verification_msg.msg import StateVisualizeMsg, VerificationResultMsg
 from std_msgs.msg import Int64
 from verification_msg.srv import VerifierSrv, VerifierSrvResponse
 
 class AgentCar:
-    def __init__(self, idx: int, waypoints: List[Waypoint], init_set: List[float], lock):
+    def __init__(self, idx: int, waypoints: List[Waypoint], init_state: List[float]):
         self.idx = idx
         self.waypoint_list: List[Waypoint] = waypoints
-        self.init_set: List[float] = init_set
+        self.init_state: List[float] = init_state
         print(f'Publish states to /agent{self.idx}/state_visualize')
         self.state_publisher = rospy.Publisher(f'/agent{self.idx}/state_visualize', StateVisualizeMsg, queue_size=10)
         self.verification_time = []
         self.reachtube_time = []
         self.safety_checking_time = []
         self.total_time = []
-        self.safety_checking_lock = lock
+        self.result_publisher = rospy.Publisher('/verifier/results', VerificationResultMsg, queue_size = 10)
+        # self.safety_checking_lock = lock
         # self.status_publisher = rospy.Publisher(f'/agent{self.idx}/status', Int64, queue_size=10)
+        self.num_hit = 0
+        self.num_tube_computed = 0
 
     def dynamics(self, t, state, mode_parameters):
         v = mode_parameters[2]
@@ -144,7 +147,7 @@ class AgentCar:
         time_horizon = plan.time_bound
         variables_list = ['x', 'y', 'theta']
 
-        self.safety_checking_lock.acquire(blocking=True)
+        # self.safety_checking_lock.acquire(blocking=True)
         res = verify(
             initset_lower = init_set[0], 
             initset_upper = init_set[1], 
@@ -154,22 +157,26 @@ class AgentCar:
             dynamics = dynamics,
             variables_list = variables_list
         )
-        self.safety_checking_lock.release()
+        # self.safety_checking_lock.release()
         reachtube_time = res.rt_time 
         self.reachtube_time.append(reachtube_time)
         safety_checking_time = res.sc_time 
         self.safety_checking_time.append(safety_checking_time)
         tt_time = res.tt_time 
         self.total_time.append(tt_time)
-        if res.res == 0:
-            return 'Unsafe'
-        else:
+        if res.from_cache > 0:
+            self.num_hit += 1
+        self.num_tube_computed += 1
+        if res.res == 1:
             return 'Safe'
+        else:
+            return 'Unsafe'
 
     def execute_plan(self):
         print(f'Running agent {self.idx}')
-        curr_init_set = self.init_set 
+        curr_init_set = self.init_state 
         all_trace = []
+        res = "Safe"
         for i in range(len(self.waypoint_list)):
             current_plan = self.waypoint_list[i]
             print(f'Start verifying plan for agent {self.idx}')
@@ -188,7 +195,7 @@ class AgentCar:
             if res != 'Safe':
                 print(f"agent{self.idx} plan unsafe")
                 self.stop_agent()
-                return
+                break
             
             trace = self.TC_Simulate(current_plan.mode_parameters, curr_init_set, current_plan.time_bound)
             # plt.plot(trace[:,1], trace[:,2])
@@ -196,6 +203,20 @@ class AgentCar:
             # plt.show()
             all_trace += trace.tolist()
             curr_init_set = [trace[-1][1], trace[-1][2], trace[-1][3]]
+
+        result = VerificationResultMsg()
+        result.idx = self.idx
+        result.num_hit = self.num_hit
+        result.total_length = self.num_tube_computed
+        if res != "Safe":
+            result.result = 0
+        else:
+            result.result = 1
+        result.verification_time = self.verification_time
+        result.reachtube_time = self.reachtube_time
+        result.service_time = self.total_time 
+        result.safety_checking_time = self.safety_checking_time
+        self.result_publisher.publish(result)
 
         print(f'Done agent{self.idx} Verification Time', self.verification_time)
         print(f'Done agent{self.idx} Reachtube Time', self.reachtube_time)

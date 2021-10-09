@@ -5,10 +5,12 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import time
 import copy
+import sys
+import json
 
 import rospy
 from std_msgs.msg import Float32MultiArray, MultiArrayDimension
-from verification_msg.msg import StateVisualizeMsg, ReachtubeMsg
+from verification_msg.msg import StateVisualizeMsg, ReachtubeMsg, VerificationResultMsg
 from verification_msg.srv import UnsafeSetSrv, UnsafeSetSrvResponse
 
 from agent_car import AgentCar
@@ -35,6 +37,34 @@ class AgentData:
         self.plotted_plan = {}
         self.plotted_tube = {}
         self.unsafeset_list = unsafeset_list
+
+        self.result_subscriber = rospy.Subscriber('/verifier/results', VerificationResultMsg, self.result_handler, queue_size = 10)
+        self.results = {}
+        self.done_list = []
+        for i in range(num_agent):
+            self.done_list.append(False)
+
+    def result_handler(self, data):
+        idx = data.idx
+        num_hit = data.num_hit 
+        total_length = data.total_length
+        result = data.result
+        # total_time = data.total_time 
+        # segment_time = data.segment_time 
+        verification_time = data.verification_time 
+        reachtube_time = data.reachtube_time 
+        service_time = data.service_time
+        safety_checking_time = data.safety_checking_time
+        self.results[idx] = {
+            "num_hit":num_hit,
+            "total_length":total_length,
+            "verification_time":verification_time, 
+            "reachtube_time":reachtube_time ,
+            "service_time":service_time,
+            "safety_checking_time":safety_checking_time,
+            "result":result
+        }
+        self.done_list[idx] = True
 
     def state_handler(self, msg, idx):
         state = msg.state
@@ -152,57 +182,102 @@ class AgentData:
             plt.pause(0.000001)
             i+=1
             time.sleep(0.2)
+            if np.all(self.done_list): 
+                print("all agents finished")
+                print(self.results)
+                plt.savefig('./res_fig.png')
+                plt.close()
+                f = open('res.json', 'w+')
+                json.dump(self.results, f)
+                return 
+
             if rospy.is_shutdown():
                 print(60)
                 plt.close()
                 return
 
+def get_edge(edge_list, src_id):
+    for edge in edge_list:
+        if edge[0] == src_id:
+            return edge[0], edge[1]
+    return None, None 
+
+def get_waypoints(init_mode_id, edge_list, mode_list):
+    wp = []
+    id = init_mode_id
+    while id is not None:
+        mode = mode_list[id]
+        wp.append(Waypoint('follow_waypoint',mode[1],3.0,0))
+        src, dest = get_edge(edge_list, id)
+        id = dest    
+    return wp
+
 if __name__ == "__main__":
     rospy.init_node('spawn_agents')
 
-    num_agents = 50
-    
-    raw_wp_list = [
-        [20.0, 5.0, 20.0, 10.0],
-        [20.0, 10.0, 20.0, 15.0],
-        [20.0, 15.0, 25.0, 15.0],
-        [25.0, 15.0, 30.0, 15.0],
-        [30.0, 15.0, 35.0, 15.0],
-        [35.0, 15.0, 35.0, 20.0],
-    ]
-    raw_unsafeset_list = [
-        [[23,5,-100],[27,12,100]],
-        [[35.8,18,-100],[43,20,100]],
-    ]
-
-    # raw_wp_list = [
-    #     [0, 0, -5, 0],
-    #     [-5, 0, -10, 0],
-    #     [-10, 0, -10, 5],
-    #     [-10, 5, -15, 5],
-    #     [-15, 5, -15, 0],
-    #     [-15, 0, -15, -5]
-    # ]
-    # raw_unsafeset_list = [
-    #     [[-10, -5, -100],[0,-3,100]],
-    # ]
-    
     wp_list = []
     unsafeset_list = []
-    for i in range(num_agents):
-        wp1 = []
-        for j in range(len(raw_wp_list)):
-            raw_wp = copy.deepcopy(raw_wp_list[j])
-            raw_wp[0] += i*12
-            raw_wp[2] += i*12
-            wp1.append(Waypoint('follow_waypoint',raw_wp,4.0,0))
-        for j in range(len(raw_unsafeset_list)):
-            raw_unsafeset = copy.deepcopy(raw_unsafeset_list[j])
-            raw_unsafeset[0][0] += i*12
-            raw_unsafeset[1][0] += i*12
-            unsafeset_list.append(raw_unsafeset)
-        wp_list.append(wp1)
+    if len(sys.argv) > 1:
+        fn = sys.argv[1]
+        f = open(fn, 'r')
+        agent_data = json.load(f)
+        num_agents = len(agent_data['agents'])
+        # Handle unsafe sets
+        unsafe_sets = agent_data['unsafeSet']
+        for unsafe in unsafe_sets:
+            unsafeset_list.append(unsafe[1])
+        # Handle waypoints
+        for i in range(num_agents):
+            agent = agent_data['agents'][i]
+            init_mode_id = agent['initialModeID']
+            edge_list = agent['edge_list']
+            mode_list = agent['mode_list']
+            wp = get_waypoints(init_mode_id, edge_list, mode_list)
+            wp_list.append(wp)
+    else: 
+        num_agents = 5
+        
+        raw_wp_list = [
+            [20.0, 5.0, 20.0, 10.0],
+            [20.0, 10.0, 20.0, 15.0],
+            [20.0, 15.0, 25.0, 15.0],
+            [25.0, 15.0, 30.0, 15.0],
+            [30.0, 15.0, 35.0, 15.0],
+            [35.0, 15.0, 35.0, 20.0],
+        ]
+        raw_unsafeset_list = [
+            ["Box", [[23,5,-100],[27,12,100]]],
+            ["Box", [[35.8,18,-100],[43,20,100]]],
+        ]
 
+        # raw_wp_list = [
+        #     [0, 0, -5, 0],
+        #     [-5, 0, -10, 0],
+        #     [-10, 0, -10, 5],
+        #     [-10, 5, -15, 5],
+        #     [-15, 5, -15, 0],
+        #     [-15, 0, -15, -5]
+        # ]
+        # raw_unsafeset_list = [
+        #     [[-10, -5, -100],[0,-3,100]],
+        # ]
+        
+        for i in range(num_agents):
+            wp1 = []
+            for j in range(len(raw_wp_list)):
+                raw_wp = copy.deepcopy(raw_wp_list[j])
+                raw_wp[0] += i*12
+                raw_wp[2] += i*12
+                wp1.append(Waypoint('follow_waypoint',raw_wp,4.0,0))
+            for j in range(len(raw_unsafeset_list)):
+                raw_unsafeset = copy.deepcopy(raw_unsafeset_list[j][1])
+                raw_unsafeset[0][0] += i*12
+                raw_unsafeset[1][0] += i*12
+                unsafeset_list.append(raw_unsafeset)
+            wp_list.append(wp1)
+
+    # tmp = unsafeset_list
+    # unsafeset_list = []
     set_unsafeset = rospy.ServiceProxy('set_unsafe', UnsafeSetSrv)
     unsafe_array = np.array(unsafeset_list)
     unsafe_shape = unsafe_array.shape
@@ -217,6 +292,7 @@ if __name__ == "__main__":
 
     set_unsafeset(unsafe_list=unsafe_msg, type = 'Box')
 
+    # unsafeset_list = tmp
     agent_data = AgentData(num_agents, unsafeset_list)
     visualize_process = threading.Thread(target = agent_data.visualize_agent_data)
     visualize_process.start()
@@ -224,15 +300,19 @@ if __name__ == "__main__":
     safety_checking_lock = threading.Lock()
     agent_process_list = []
     for i in range(num_agents):
-        x_init = np.random.uniform(wp_list[i][0].mode_parameters[0] - 1, wp_list[i][0].mode_parameters[0] + 1)
-        y_init = np.random.uniform(wp_list[i][0].mode_parameters[1] - 1, wp_list[i][0].mode_parameters[1] + 1)
+        theta = np.arctan2(
+            wp_list[i][0].mode_parameters[3] - wp_list[i][0].mode_parameters[1],
+            wp_list[i][0].mode_parameters[2] - wp_list[i][0].mode_parameters[0]
+        )
+        # x_init = np.random.uniform(wp_list[i][0].mode_parameters[0] - 1, wp_list[i][0].mode_parameters[0] + 1)
+        # y_init = np.random.uniform(wp_list[i][0].mode_parameters[1] - 1, wp_list[i][0].mode_parameters[1] + 1)
         # theta_init = np.random.uniform(np.pi/2-0.5,np.pi/2+0.5)
-        # x_init = wp_list[i][0].mode_parameters[0]
-        # y_init = wp_list[i][0].mode_parameters[1]
-        theta_init = np.pi/2
-        init_set = [x_init, y_init, theta_init]
+        x_init = wp_list[i][0].mode_parameters[0]
+        y_init = wp_list[i][0].mode_parameters[1]
+        theta_init = theta
+        init_state = [x_init, y_init, theta_init]
 
-        agent = AgentCar(i, wp_list[i], init_set, lock = safety_checking_lock)
+        agent = AgentCar(i, wp_list[i], init_state)
         # p = Process(target=agent.execute_plan)
         # p.start()
         p = threading.Thread(target = agent.execute_plan)

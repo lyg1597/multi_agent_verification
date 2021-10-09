@@ -33,6 +33,8 @@ def check_in_polytope(pt, plygn):
             is_in = False
             break
     return is_in
+    # is_in = A.dot(np.array(pt).flatten()) - b < 0
+    # return np.all(is_in)
 
 class RRT:
     """
@@ -68,8 +70,8 @@ class RRT:
             self.color = color
             
     def __init__(self, start, goal_list, obstacle_list, rand_area, color = 'b',
-                 expand_dis=[3.0], expand_angle = [0,np.pi/4,np.pi/2,3*np.pi/4,np.pi, 5*np.pi/4, 3*np.pi/2, 7*np.pi/2], 
-                 path_resolution=0.01, goal_sample_rate=0, max_iter= 5000):
+                 expand_dis=[3.0], expand_angle = [0,np.pi/4,np.pi/2,3*np.pi/4,np.pi, 5*np.pi/4, 3*np.pi/2, 7*np.pi/4], 
+                 path_resolution=0.5, goal_sample_rate=0, max_iter= 5000):
         """
         Setting Parameter
 
@@ -150,6 +152,7 @@ class RRT:
                 if idx not in self.reach_node_idx:
                     self.goal_list[idx].reached = True
                     self.reach_node_idx.append(idx)
+                break
                 # pass 
                 # return self.generate_final_course(len(self.node_list) - 1) ,i
 
