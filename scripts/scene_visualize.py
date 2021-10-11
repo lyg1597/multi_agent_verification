@@ -150,9 +150,9 @@ def scene_visualize(fn, title, x_lim, y_lim):
     plt.show()
 
 if __name__ == "__main__":
-    fn = "scenarios/scene_complex_v1.json"
+    fn = "scenarios/scene_complex2.json"
     fn = os.path.abspath(fn)
-    title = "scene_complex_v1"
-    x_lim = [-6,246]
+    title = "scene_complex2"
+    x_lim = [-6,486]
     y_lim = [-6,126]
     scene_visualize(fn, title, x_lim, y_lim)
