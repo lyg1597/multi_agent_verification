@@ -14,6 +14,7 @@ from verification_msg.msg import StateVisualizeMsg, ReachtubeMsg, VerificationRe
 from verification_msg.srv import UnsafeSetSrv, UnsafeSetSrvResponse
 
 from agent_car import AgentCar
+from agent_quadrotor import AgentQuadrotor
 from common.Waypoint import Waypoint
 
 
@@ -55,13 +56,21 @@ class AgentData:
         reachtube_time = data.reachtube_time 
         service_time = data.service_time
         safety_checking_time = data.safety_checking_time
+        segment_time = data.segment_time
+        num_refine = data.num_refine
+        refine_time = data.refine_time
+        server_verify_time = data.server_verify_time
         self.results[idx] = {
             "num_hit":num_hit,
             "total_length":total_length,
             "verification_time":verification_time, 
             "reachtube_time":reachtube_time ,
-            "service_time":service_time,
+            "server_time":service_time,
             "safety_checking_time":safety_checking_time,
+            "segment_time":segment_time,
+            "num_refine":num_refine,
+            "refine_time":refine_time,
+            "server_verify_time":server_verify_time,
             "result":result
         }
         self.done_list[idx] = True
@@ -313,6 +322,16 @@ if __name__ == "__main__":
         init_state = [x_init, y_init, theta_init]
 
         agent = AgentCar(i, wp_list[i], init_state)
+
+        # x_init = wp_list[i][0].mode_parameters[0]
+        # y_init = wp_list[i][0].mode_parameters[1]
+        # z_init = wp_list[i][0].mode_parameters[2]
+        # vx_init = 0
+        # vy_init = 0
+        # vz_init = 0
+        # init_state = [x_init, y_init, z_init, vx_init, vy_init, vz_init]
+        # agent = AgentQuadrotor(i, wp_list[i], init_state)
+
         # p = Process(target=agent.execute_plan)
         # p.start()
         p = threading.Thread(target = agent.execute_plan)

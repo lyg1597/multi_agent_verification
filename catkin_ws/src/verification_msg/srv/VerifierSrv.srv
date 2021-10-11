@@ -5,6 +5,7 @@ float32 time_horizon
 int64 idx
 string dynamics
 string[] variables_list
+float32[] initset_resolution
 ---
 int64 res
 int64 idx
@@ -12,3 +13,6 @@ float32 rt_time
 float32 sc_time
 float32 tt_time
 int64 from_cache
+int64 num_ref
+float32 verification_time 
+float32 refine_time

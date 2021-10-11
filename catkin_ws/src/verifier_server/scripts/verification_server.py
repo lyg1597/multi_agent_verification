@@ -5,9 +5,13 @@ from __future__ import print_function
 from verification_msg.srv import VerifierSrv,VerifierSrvResponse, UnsafeSetSrv, UnsafeSetSrvResponse
 from dryvr_utils.dryvr_utils import DryVRUtils
 from std_msgs.msg import MultiArrayDimension
-
 import rospy
 from verification_msg.msg import ReachtubeMsg
+
+try:
+    from common.Waypoint import Waypoint
+except:
+    from Waypoint import Waypoint
 
 import polytope as pc 
 import time
@@ -467,8 +471,9 @@ class MultiAgentVerifier:
         agent_dynamics = params.dynamics
         variables_list = params.variables_list
         time_horizon = params.time_horizon
+        initset_resolution = params.initset_resolution
         # print(init_set)
-        init_set = self.bloat_initset(init_set, [0.5,0.5,0.1])
+        init_set = self.bloat_initset(init_set, resolution=initset_resolution)
         dryvrutils = DryVRUtils(
             variables_list = variables_list, 
             dynamics_path = agent_dynamics, 
@@ -503,6 +508,7 @@ class MultiAgentVerifier:
             if key != idx:
                 other_tube = self.curr_segments[key][1]
                 other_plan = self.curr_segments[key][0]
+                print(plan, other_plan)
                 plan_dist = np.linalg.norm(np.array(plan) - np.array(other_plan))
                 if plan_dist > 100:
                     continue
@@ -570,12 +576,27 @@ class MultiAgentVerifier:
 
     def verify_full(self, params: VerifierSrv):
         self.safety_checking_lock.acquire(blocking=True)
-        for _ in range(self.refine_threshold):
+        verification_start = time.time()
+        verification_time = 0
+        refine_time = 0
+        for i in range(self.refine_threshold):
+            verification_start = time.time()
             res, key, initset_virtual = self.verify_cached(params)
+            verification_time += (time.time() - verification_start)
             if res.res == 1 or res.res == -1:
+                res.tt_time = time.time() - verification_start
+                res.num_ref = i
+                res.refine_time = refine_time
+                res.verification_time = verification_time
                 self.safety_checking_lock.release()
                 return res
+            refine_start = time.time()
             self.cache.refine(key, initset_virtual)
+            refine_time += (time.time() - refine_start)
+        res.num_ref = i
+        res.tt_time = time.time() - verification_start
+        res.refine_time = refine_time
+        res.verification_time = verification_time
         self.safety_checking_lock.release()
         return res
 
@@ -587,13 +608,15 @@ class MultiAgentVerifier:
         agent_dynamics = params.dynamics
         variables_list = params.variables_list
         time_horizon = params.time_horizon
+        initset_resolution = params.initset_resolution
 
-        init_set = self.bloat_initset(init_set)
+        init_set = self.bloat_initset(init_set, resolution = initset_resolution)
 
         compute_reachtube_start = time.time()
         dynamics_funcs = self.cache.get_agent_dynamics(agent_dynamics)
-        transform_information = dynamics_funcs.get_transform_information(plan)
-        plan_virtual = dynamics_funcs.transform_mode_to_virtual(plan, transform_information)
+        wp = Waypoint("follow_waypoint",plan,time_horizon,0)
+        transform_information = dynamics_funcs.get_transform_information(wp)
+        plan_virtual = dynamics_funcs.transform_mode_to_virtual(wp, transform_information)
         initset_poly = pc.box2poly(np.array(init_set).T)
         initset_virtual_poly = dynamics_funcs.transform_poly_to_virtual(initset_poly, transform_information)
         initset_virtual = np.column_stack(initset_virtual_poly.bounding_box).T
@@ -623,9 +646,9 @@ class MultiAgentVerifier:
         if not res:
             safety_checking_time = time.time() - safety_checking_start
             if from_cache:
-                return VerifierSrvResponse(res = 0, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, from_cache = int(from_cache)), (tuple(plan_virtual), agent_dynamics), initset_virtual
+                return VerifierSrvResponse(res = 0, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, from_cache = int(from_cache), num_ref = 0), (tuple(plan_virtual), agent_dynamics), initset_virtual
             else:
-                return VerifierSrvResponse(res = -1, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, from_cache = int(from_cache)), (tuple(plan_virtual), agent_dynamics), initset_virtual
+                return VerifierSrvResponse(res = -1, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, from_cache = int(from_cache), num_ref = 0), (tuple(plan_virtual), agent_dynamics), initset_virtual
  
         self.curr_segments[idx] = (plan, tube)
         print(f"start checking dynamic safety for agent {idx}")
@@ -637,13 +660,13 @@ class MultiAgentVerifier:
         if not res:
             self.curr_segments[idx] = (plan, [])
             if from_cache:
-                return VerifierSrvResponse(res = 0, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, tt_time = tt_time, from_cache = int(from_cache)), (tuple(plan_virtual), agent_dynamics), initset_virtual
+                return VerifierSrvResponse(res = 0, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, tt_time = tt_time, from_cache = int(from_cache), num_ref = 0), (tuple(plan_virtual), agent_dynamics), initset_virtual
             else:
-                return VerifierSrvResponse(res = -1, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, tt_time = tt_time, from_cache = int(from_cache)), (tuple(plan_virtual), agent_dynamics), initset_virtual
+                return VerifierSrvResponse(res = -1, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, tt_time = tt_time, from_cache = int(from_cache), num_ref = 0), (tuple(plan_virtual), agent_dynamics), initset_virtual
 
-        return VerifierSrvResponse(res = 1, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, tt_time = tt_time, from_cache = int(from_cache)), (tuple(plan_virtual), agent_dynamics), initset_virtual
+        return VerifierSrvResponse(res = 1, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, tt_time = tt_time, from_cache = int(from_cache), num_ref = 0), (tuple(plan_virtual), agent_dynamics), initset_virtual
 
-    def verify(self, params: VerifierSrv):
+    def verify_nocache(self, params: VerifierSrv):
         # init_set = params.init_set
         # plan = params.plan
         self.safety_checking_lock.acquire(blocking=True)

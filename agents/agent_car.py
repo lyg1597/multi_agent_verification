@@ -35,6 +35,10 @@ class AgentCar:
         # self.status_publisher = rospy.Publisher(f'/agent{self.idx}/status', Int64, queue_size=10)
         self.num_hit = 0
         self.num_tube_computed = 0
+        self.segment_time = []
+        self.num_refine = []
+        self.refine_time = []
+        self.server_verify_time = []
 
     def dynamics(self, t, state, mode_parameters):
         v = mode_parameters[2]
@@ -155,7 +159,8 @@ class AgentCar:
             time_horizon = time_horizon,
             idx = idx, 
             dynamics = dynamics,
-            variables_list = variables_list
+            variables_list = variables_list,
+            initset_resolution = [0.5, 0.5, 0.1]
         )
         # self.safety_checking_lock.release()
         reachtube_time = res.rt_time 
@@ -164,6 +169,9 @@ class AgentCar:
         self.safety_checking_time.append(safety_checking_time)
         tt_time = res.tt_time 
         self.total_time.append(tt_time)
+        self.num_refine.append(res.num_ref)
+        self.refine_time.append(res.refine_time)
+        self.server_verify_time.append(res.verification_time)
         if res.from_cache > 0:
             self.num_hit += 1
         self.num_tube_computed += 1
@@ -178,6 +186,7 @@ class AgentCar:
         all_trace = []
         res = "Safe"
         for i in range(len(self.waypoint_list)):
+            start_time = time.time()
             current_plan = self.waypoint_list[i]
             print(f'Start verifying plan for agent {self.idx}')
             verifier_start = time.time()
@@ -204,6 +213,8 @@ class AgentCar:
             all_trace += trace.tolist()
             curr_init_set = [trace[-1][1], trace[-1][2], trace[-1][3]]
 
+            self.segment_time.append(time.time() - start_time)
+
         result = VerificationResultMsg()
         result.idx = self.idx
         result.num_hit = self.num_hit
@@ -216,6 +227,10 @@ class AgentCar:
         result.reachtube_time = self.reachtube_time
         result.service_time = self.total_time 
         result.safety_checking_time = self.safety_checking_time
+        result.segment_time = self.segment_time
+        result.num_refine = self.num_refine
+        result.refine_time = self.refine_time 
+        result.server_verify_time = self.server_verify_time
         self.result_publisher.publish(result)
 
         print(f'Done agent{self.idx} Verification Time', self.verification_time)

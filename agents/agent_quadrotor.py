@@ -43,11 +43,15 @@ class AgentQuadrotor:
         self.reachtube_time = []
         self.safety_checking_time = []
         self.total_time = []
+        self.segment_time = []
         self.result_publisher = rospy.Publisher('/verifier/results', VerificationResultMsg, queue_size = 10)
         # self.safety_checking_lock = lock
         # self.status_publisher = rospy.Publisher(f'/agent{self.idx}/status', Int64, queue_size=10)
         self.num_hit = 0
         self.num_tube_computed = 0
+        self.num_refine = []
+        self.refine_time = []
+        self.server_verify_time = []
 
     def func1(self, t, vars, u):
         u1 = u[0]
@@ -84,7 +88,7 @@ class AgentQuadrotor:
         return [dref_x, dref_y, dref_z, dx, dy, dz, dvx, dvy, dvz]
 
 
-    def runModel(self, initalCondition, time_bound, time_step, ref_input):
+    def runModel(self, initalCondition, time_bound, time_step, ref_input, curr_plan):
         bias1 = [0.005067077465355396, 0.013770184479653835, 0.02960527129471302, -0.005076207220554352,
                 0.00986097939312458, -0.004963981453329325, 0.005067163147032261, 0.022097138687968254,
                 0.005067095160484314, -0.009861057624220848, -0.005051563028246164, -0.013770153746008873,
@@ -299,7 +303,7 @@ class AgentQuadrotor:
         ey_list = []
         ez_list = []
         t = 0
-        time = [t]
+        time_list = [t]
         trace = [[t]]
         trace[0].extend(init[3:])
         i = 0
@@ -339,13 +343,22 @@ class AgentQuadrotor:
             i += 1
             #  print(i,idx,u,res)
             trajectory.append(val)
-            time.append(t)
+            time_list.append(t)
 
             ex_list.append(ex)
             ey_list.append(ey)
             ez_list.append(ez)
             trace.append([t])
             trace[i].extend(val[3:])  # remove the reference trajectory from the trace
+
+            time.sleep(time_step*10)
+
+            curr_state = StateVisualizeMsg()
+            curr_state.state = [val[0], val[1]]
+            curr_state.plan = curr_plan
+            # print(f"agent{self.idx}: publish state: {curr_state}")
+            self.state_publisher.publish(curr_state)
+
         return trace
 
 
@@ -353,9 +366,10 @@ class AgentQuadrotor:
     def TC_Simulate(self, Mode, initialCondition, time_bound):
         time_step = 0.05;
         time_bound = float(time_bound)
-        Mode = Mode[1:-1]
-        mode_parameters = Mode.split(";")
-        mode_parameters = [float(x) for x in mode_parameters]
+        # Mode = Mode[1:-1]
+        # mode_parameters = Mode.split(";")
+        # mode_parameters = [float(x) for x in mode_parameters]
+        mode_parameters = Mode
         number_points = int(np.ceil(time_bound / time_step))
         t = [i * time_step for i in range(0, number_points)]
         if t[-1] != time_step:
@@ -370,10 +384,10 @@ class AgentQuadrotor:
         ref_vz = (mode_parameters[5] - mode_parameters[2]) / time_bound
         sym_rot_angle = 0
         trace = self.runModel(mode_parameters[0:3] + list(initialCondition), time_bound, time_step, [ref_vx, ref_vy, ref_vz,
-                                                                                            sym_rot_angle])
+                                                                                            sym_rot_angle], mode_parameters)
         return np.array(trace)
 
-    def verifier(self, idx, plan, init_set):
+    def verifier(self, idx, plan: Waypoint, init_set):
         rospy.wait_for_service('verify')
         verify = rospy.ServiceProxy('verify', VerifierSrv)
         dynamics = "dryvr_dynamics/NNquadrotor_new_code_TR"
@@ -388,7 +402,8 @@ class AgentQuadrotor:
             time_horizon = time_horizon,
             idx = idx, 
             dynamics = dynamics,
-            variables_list = variables_list
+            variables_list = variables_list,
+            initset_resolution = [0.5,0.5,0.5,0.1,0.1,0.1]
         )
         # self.safety_checking_lock.release()
         reachtube_time = res.rt_time 
@@ -397,6 +412,9 @@ class AgentQuadrotor:
         self.safety_checking_time.append(safety_checking_time)
         tt_time = res.tt_time 
         self.total_time.append(tt_time)
+        self.num_refine.append(res.num_ref)
+        self.refine_time.append(res.refine_time)
+        self.server_verify_time.append(res.verification_time)
         if res.from_cache > 0:
             self.num_hit += 1
         self.num_tube_computed += 1
@@ -411,6 +429,7 @@ class AgentQuadrotor:
         all_trace = []
         res = "Safe"
         for i in range(len(self.waypoint_list)):
+            start_time = time.time()
             current_plan = self.waypoint_list[i]
             print(f'Start verifying plan for agent {self.idx}')
             verifier_start = time.time()
@@ -436,6 +455,7 @@ class AgentQuadrotor:
             # plt.show()
             all_trace += trace.tolist()
             curr_init_set = [trace[-1][1], trace[-1][2], trace[-1][3], trace[-1][4], trace[-1][5], trace[-1][6]]
+            self.segment_time.append(time.time() - start_time)
 
         result = VerificationResultMsg()
         result.idx = self.idx
@@ -449,6 +469,10 @@ class AgentQuadrotor:
         result.reachtube_time = self.reachtube_time
         result.service_time = self.total_time 
         result.safety_checking_time = self.safety_checking_time
+        result.segment_time = self.segment_time
+        result.num_refine = self.num_refine
+        result.refine_time = self.refine_time 
+        result.server_verify_time = self.server_verify_time
         self.result_publisher.publish(result)
 
         print(f'Done agent{self.idx} Verification Time', self.verification_time)
@@ -460,3 +484,37 @@ class AgentQuadrotor:
 
     def stop_agent(self):
         pass
+
+if __name__ == "__main__":
+    rospy.init_node('agent_test')
+    wp = [
+        Waypoint('follow_waypoint',[20.4142135623735, 0.4142135623721741, 0, 20.4142135623735, 5.4142135623721668, 0],3.0,0),
+        Waypoint('follow_waypoint',[20.4142135623735, 5.4142135623721741, 0, 20.4142135623735, 10.4142135623721668, 0],3.0,0),
+        Waypoint('follow_waypoint',[20.4142135623735, 10.4142135623721741, 0, 20.4142135623735, 15.4142135623721668, 0],3.0,0),
+        Waypoint('follow_waypoint',[20.4142135623735, 15.4142135623721741, 0, 25.4142135623735, 15.4142135623721668, 0],3.0,0),
+        Waypoint('follow_waypoint',[25.4142135623735, 15.4142135623721741, 0, 30.4142135623735, 15.4142135623721668, 0],3.0,0),
+    ]
+
+    x_init = np.random.uniform(20.4142135623735-1, 20.4142135623735+1)
+    y_init = np.random.uniform(0.4142135623721741-1,0.4142135623721741+1)
+    z_init = np.random.uniform(-1, 1)
+    vx_init = 0
+    vy_init = 0
+    vz_init = 0
+    quadrotor = AgentQuadrotor(0, wp, [x_init, y_init, z_init, vx_init, vy_init, vz_init])
+    trace = quadrotor.execute_plan()
+    trace = np.array(trace)
+
+    plt.figure(1)
+    plt.plot(trace[:,1],trace[:,2])
+    plt.plot(trace[:,1],trace[:,2], 'r.')
+    plt.figure(2)
+    plt.plot(trace[:,0],trace[:,1])
+    plt.plot(trace[:,0],trace[:,1], 'r.')
+    plt.figure(3)
+    plt.plot(trace[:,0],trace[:,2])
+    plt.plot(trace[:,0],trace[:,2], 'r.')
+    plt.figure(4)
+    plt.plot(trace[:,0],trace[:,3])
+    plt.plot(trace[:,0],trace[:,3], 'r.')
+    plt.show()

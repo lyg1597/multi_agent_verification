@@ -4,8 +4,11 @@ import numpy as np
 import polytope as pc
 from typing import Optional, List, Tuple
 import math
-from src.Waypoint import Waypoint
-
+try:
+    from common.Waypoint import Waypoint
+except:
+    from Waypoint import Waypoint
+    
 class FFNNC(torch.nn.Module):
     def __init__(self, D_in=6, D_out=8):
         super(FFNNC, self).__init__()
@@ -409,7 +412,8 @@ def transform_mode_to_virtual(waypoint: Waypoint, transform_information):
     xd2 = round(xd2)
     yd3 = round(yd2) # round(yd3)
     zd3 = round(zd3) # round(zd3)
-    return Waypoint(waypoint.mode,[xs2, ys3, zs3, xd2, yd3, zd3], waypoint.time_bound, waypoint.id)
+    return [xs2, ys3, zs3, xd2, yd3, zd3]
+    # return Waypoint(waypoint.mode,[xs2, ys3, zs3, xd2, yd3, zd3], waypoint.time_bound, waypoint.id)
 
 
 def transform_poly_from_virtual(poly, transform_information):
