@@ -508,7 +508,7 @@ class MultiAgentVerifier:
             if key != idx:
                 other_tube = self.curr_segments[key][1]
                 other_plan = self.curr_segments[key][0]
-                print(plan, other_plan)
+                # print(plan, other_plan)
                 plan_dist = np.linalg.norm(np.array(plan) - np.array(other_plan))
                 if plan_dist > 100:
                     continue
@@ -566,7 +566,7 @@ class MultiAgentVerifier:
             return True
 
     def bloat_initset(self, initset, resolution = [0.5,0.5,0.1]):
-        print(initset)
+        # print(initset)
         res = initset 
         for i in range(len(res[0])):
             if resolution[i] != 0:
@@ -610,8 +610,6 @@ class MultiAgentVerifier:
         time_horizon = params.time_horizon
         initset_resolution = params.initset_resolution
 
-        init_set = self.bloat_initset(init_set, resolution = initset_resolution)
-
         compute_reachtube_start = time.time()
         dynamics_funcs = self.cache.get_agent_dynamics(agent_dynamics)
         wp = Waypoint("follow_waypoint",plan,time_horizon,0)
@@ -629,6 +627,7 @@ class MultiAgentVerifier:
             from_cache = True
             tube = self.cache.transform_tube_from_virtual(tube_virtual, transform_information, dynamics_funcs)
         else:
+            init_set = self.bloat_initset(init_set, resolution = initset_resolution)
             tube, trace = self.cache.compute_tube(init_set, plan, idx, variables_list, time_horizon, agent_dynamics)
             tube_virtual = self.cache.transform_tube_to_virtual(tube, transform_information, dynamics_funcs)
             # tube_virtual, trace = self.cache.compute_tube(initset_virtual, plan_virtual, idx, variables_list, time_horizon, agent_dynamics)
@@ -722,6 +721,7 @@ class MultiAgentVerifier:
         unsafe_list = np.array(unsafe_msg.data).reshape(shape).tolist()
         if unsafe_type == "Box" or unsafe_type == "box":
             for box in unsafe_list:
+                # print(box)
                 poly = pc.box2poly(np.array(box).T)
                 self.unsafeset_list.append(poly)
         else:

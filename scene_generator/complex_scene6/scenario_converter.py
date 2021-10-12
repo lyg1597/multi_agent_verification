@@ -184,7 +184,7 @@ if __name__ == "__main__":
 
     for A,b in init:
         ppm.polygon.plot_polygon(ppm.duality.compute_polytope_vertices(A,b), color = 'blue')
-    plt.xlim(0, 240)
+    plt.xlim(0, 480)
     plt.ylim(0, 120)
     plt.grid()
 
