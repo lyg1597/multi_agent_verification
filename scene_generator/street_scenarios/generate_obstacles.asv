@@ -1,0 +1,17 @@
+function map = generate_obstacles(fn)
+%GENERATE_OBSTACLES 此处显示有关此函数的摘要
+%   此处显示详细说明
+image = imread(fn);
+image_bw = rgb2gray(image);
+image_contrast = imadjust(image_bw, [0.99, 1]);
+% imshow(image_contrast)
+image_binary = image_contrast < 100;
+map = robotics.BinaryOccupancyGrid(image_binary);
+show(map);
+for i=1:10000
+    x = randi(map.XWorldLimits);
+    y = randi(map.YWorldLimits);
+    
+end
+end
+
