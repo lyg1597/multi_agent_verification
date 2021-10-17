@@ -92,9 +92,15 @@ class AgentData:
         tube = np.array(msg.tube.data).reshape(shape).tolist() 
         plan = msg.plan 
         from_cache = msg.from_cache
-        self.tube_plan[idx] = plan
-        self.tube[idx] = tube
-        self.tube_cached[idx] = from_cache
+        if idx in self.tube_plan:
+            self.tube_plan[idx].append(plan)
+            self.tube[idx].append(tube)
+            self.tube_cached[idx].append(from_cache)
+        else:
+            self.tube_plan[idx] = [plan]
+            self.tube[idx] = [tube]
+            self.tube_cached[idx] = [from_cache]
+            
         # print(tube)
         pass
 
@@ -130,6 +136,27 @@ class AgentData:
             height = abs(box[0][1] - box[1][1])
             rect = patches.Rectangle((x,y), width, height, edgecolor = '#d9d9d9', facecolor = '#d9d9d9')
             ax.add_patch(rect)
+
+    def generate_figure(self, fn):
+        plt.figure()
+        ax = plt.gca()
+        self.plot_unsafe(ax)
+        for agent_idx in range(self.num_agent):
+            agent_plan_list = self.tube_plan[agent_idx]
+            agent_tube_list = self.tube[agent_idx]
+            agent_cached_list = self.tube_cached[agent_idx]
+            for i in range(len(agent_plan_list)):
+                tube = agent_tube_list[i]
+                plan = agent_plan_list[i]
+                cached = agent_cached_list[i]
+                plt.plot([plan[0], plan[2]], [plan[1], plan[3]], color = '#8dd3c7')
+                self.plot_tube(ax, tube, from_cache=cached)
+            agent_trajectory = self.agent_state_dict[agent_idx]
+            agent_array = np.array(agent_trajectory)
+            plt.plot(agent_array[:,0], agent_array[:,1], color = '#fb8072', marker = '.')
+
+        # plt.show()
+        plt.savefig(fn)
 
     def visualize_agent_data(self):
         i = 0
@@ -175,18 +202,18 @@ class AgentData:
 
                     if idx in self.tube:
                         if idx in self.plotted_tube:
-                            if self.plotted_tube[idx] != self.tube_plan[idx]:
+                            if self.plotted_tube[idx] != self.tube_plan[idx][-1]:
                                 # print(f'agent{idx} plot tube')
-                                tube = self.tube[idx]
-                                from_cache = self.tube_cached[idx]
+                                tube = self.tube[idx][-1]
+                                from_cache = self.tube_cached[idx][-1]
                                 self.plot_tube(ax, tube, from_cache)
-                                self.plotted_tube[idx] = self.tube_plan[idx]
+                                self.plotted_tube[idx] = self.tube_plan[idx][-1]
                         else:
                             # print(f'agent{idx} plot tube')
-                            tube = self.tube[idx]
-                            from_cache = self.tube_cached[idx]
+                            tube = self.tube[idx][-1]
+                            from_cache = self.tube_cached[idx][-1]
                             self.plot_tube(ax, tube, from_cache)
-                            self.plotted_tube[idx] = self.tube_plan[idx]
+                            self.plotted_tube[idx] = self.tube_plan[idx][-1]
                     
             plt.pause(0.000001)
             i+=1
@@ -197,6 +224,7 @@ class AgentData:
                 plt.savefig('./res_fig.png')
                 plt.close()
                 f = open('res.json', 'w+')
+                self.generate_figure("./res_fig.png")
                 json.dump(self.results, f)
                 return 
 
@@ -244,7 +272,7 @@ if __name__ == "__main__":
             wp = get_waypoints(init_mode_id, edge_list, mode_list)
             wp_list.append(wp)
     else: 
-        num_agents = 5
+        num_agents = 100
         
         raw_wp_list = [
             [20.0, 5.0, 20.0, 10.0],

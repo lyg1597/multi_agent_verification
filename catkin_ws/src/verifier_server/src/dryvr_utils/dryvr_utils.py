@@ -119,7 +119,7 @@ class DryVRUtils:
         dryvr_resets_list = []
         dryvr_unsafeset_string = ""
         dryvr_directory_string = self.dynamics_path # "examples/Linear3D"
-        print(self.dynamics_path)
+        # print(self.dynamics_path)
         dryvr_mode = str(waypoint)
         dryvr_mode = dryvr_mode.replace(",", ";")
         dryvr_vertex_list.append(dryvr_mode)

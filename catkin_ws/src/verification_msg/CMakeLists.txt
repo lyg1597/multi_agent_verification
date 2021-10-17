@@ -60,6 +60,7 @@ add_service_files(
   FILES
   VerifierSrv.srv
   UnsafeSetSrv.srv
+  CacheInfoSrv.srv
 )
 
 ## Generate actions in the 'action' folder

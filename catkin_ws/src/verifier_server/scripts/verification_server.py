@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 
-from verification_msg.srv import VerifierSrv,VerifierSrvResponse, UnsafeSetSrv, UnsafeSetSrvResponse
+from verification_msg.srv import VerifierSrv,VerifierSrvResponse, UnsafeSetSrv, UnsafeSetSrvResponse, CacheInfoSrv, CacheInfoSrvResponse
 from dryvr_utils.dryvr_utils import DryVRUtils
 from std_msgs.msg import MultiArrayDimension
 import rospy
@@ -259,7 +259,8 @@ class ReachTubeUnion():
         #     initset_union_poly.append(pc.box2poly(np.array(initset).T))
         # self.initset_union = pc.Region(list_poly = initset_union_poly)
         # self.initset_union_center = np.mean(np.array(self.initset_center_list), axis = 0)
-
+        self.children = None
+        self.depth = 0
         if tube != []:
             self.tube_list = [tube]
             self.combined_tube = tube 
@@ -320,6 +321,16 @@ class ReachTubeUnion():
             return None
 
     def split(self, initset_virtual):
+        print(f"number of tubes {self.num_tubes}")
+
+        if self.num_tubes == 1:
+            tmp_dict = {}
+            tmp_dict[2] = ReachTubeUnion(self.initset_list[0], self.plan, self.tube_list[0])
+            tmp_dict[1] = ReachTubeUnion(initset_center = np.mean(np.array(initset_virtual), axis = 0))
+            tmp_dict[1].depth = self.depth + 1
+            tmp_dict[2].depth = self.depth + 1
+            return ReachTubeTreeNode([tmp_dict[1], tmp_dict[2]])
+
         center1 = np.mean(np.array(initset_virtual), axis = 0)
         center2 = self.initset_union_center
         cluster1 = []
@@ -362,6 +373,8 @@ class ReachTubeUnion():
             print(self.in_cache(initset_virtual, []))
         if 1 not in tmp_dict:
             tmp_dict[1] = ReachTubeUnion(initset_center = np.mean(np.array(initset_virtual), axis = 0))
+        tmp_dict[1].depth = self.depth + 1
+        tmp_dict[2].depth = self.depth + 1
         return ReachTubeTreeNode([tmp_dict[1], tmp_dict[2]])
 
 class DryVRRunner:
@@ -622,7 +635,7 @@ class MultiAgentVerifier:
         # print(initset_virtual)
         from_cache = False 
         if self.cache.in_cache(initset_virtual, plan_virtual, agent_dynamics):
-            print("cache hit")
+            # print("cache hit")
             tube_virtual = self.cache.get(initset_virtual, plan_virtual, agent_dynamics)
             from_cache = True
             tube = self.cache.transform_tube_from_virtual(tube_virtual, transform_information, dynamics_funcs)
@@ -640,7 +653,7 @@ class MultiAgentVerifier:
         # tube = self.cache.transform_tube_from_virtual(tube_virtual, transform_information, dynamics_funcs)
         self.publish_reachtube(idx, tube, plan, int(from_cache))
         safety_checking_start = time.time()
-        print(f"start checking static safety for agent {idx}")
+        # print(f"start checking static safety for agent {idx}")
         res = self.check_static_safety(tube)
         if not res:
             safety_checking_time = time.time() - safety_checking_start
@@ -650,10 +663,10 @@ class MultiAgentVerifier:
                 return VerifierSrvResponse(res = -1, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, from_cache = int(from_cache), num_ref = 0), (tuple(plan_virtual), agent_dynamics), initset_virtual
  
         self.curr_segments[idx] = (plan, tube)
-        print(f"start checking dynamic safety for agent {idx}")
+        # print(f"start checking dynamic safety for agent {idx}")
         res = self.check_dynamic_safety(idx, plan, tube)
         safety_checking_time = time.time() - safety_checking_start
-        print(idx, f"verification finished for plan {plan}")
+        # print(idx, f"verification finished for plan {plan}")
         tt_time = time.time() - total_time
 
         if not res:
@@ -733,9 +746,10 @@ class MultiAgentVerifier:
     def start_verifier_server(self):
         rospy.init_node('verifier_server')
         print(os.path.realpath(__file__))
-        verify_service = rospy.Service('verify', VerifierSrv, self.verify_full)
+        verify_service = rospy.Service('verify', VerifierSrv, self.verify_nocache)
         print("Verification Server Started")
         unsafe_service = rospy.Service('set_unsafe', UnsafeSetSrv, self.process_unsafeset)
+        rospy.Service('print_tree', CacheInfoSrv,self.print_cache_info)
         rospy.spin()
     
     def publish_reachtube(self, idx, tube, plan, from_cache):
@@ -754,6 +768,20 @@ class MultiAgentVerifier:
         msg.plan = plan
 
         self.reachtube_publisher.publish(msg)
+
+    def print_cache_info(self, params):
+        print("Print cache info")
+        for key in self.cache.cache_dict:
+            root = self.cache.cache_dict[key]
+            expansion_queue = [root]
+            print(f">>>>>> {key}")
+            while expansion_queue != []:
+                node = expansion_queue.pop(0)
+                if node.children is None:
+                    print(node.depth, node.num_tubes)
+                else:
+                    expansion_queue += node.children
+        return CacheInfoSrvResponse()
 
 if __name__ == "__main__":
     print(os.getcwd())

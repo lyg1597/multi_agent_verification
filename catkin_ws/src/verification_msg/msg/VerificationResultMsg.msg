@@ -7,7 +7,7 @@ float32[] reachtube_time
 float32[] service_time
 float32[] safety_checking_time
 float32[] segment_time
-float32[] num_refine 
+int32[] num_refine 
 float32[] refine_time  
 float32[] server_verify_time 
         
