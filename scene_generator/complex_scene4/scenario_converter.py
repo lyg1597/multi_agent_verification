@@ -127,7 +127,7 @@ def run_planner(obs, init_list, goal_list, search_area, color = 'b'):
                     goal_list=goal,
                     rand_area=search_area,
                     obstacle_list=obs,
-                    expand_dis=[3], max_iter = 30000, color = color)
+                    expand_dis=[3], expand_angle = [elem /8*np.pi/2 for elem in range(24)], max_iter = 30000, color = color)
         path,edges = rrt.planning(animation = True)
         if len(path)!=0:
             path_list.append(path)

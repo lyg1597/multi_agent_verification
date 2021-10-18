@@ -34,10 +34,12 @@ def convert_to_json(fn = './scene.json',obs = [], init_list = [], goal = [], edg
         unsafe_set = ['Vertices']
         obstecle_A = np.array(obstecle[0])
         obstecle_b = np.array(obstecle[1])
-        obstecle_b = obstecle_b-4
+        obstecle_b = obstecle_b-0.5
         poly = pc.Polytope(obstecle_A,obstecle_b)
         vertices = [list(elem) for elem in ppm.duality.compute_polytope_vertices(obstecle_A,obstecle_b)]
-        unsafe_set = unsafe_set + [vertices]
+        vertices_lower = [elem+[-100] for elem in vertices] 
+        vertices_upper = [elem+[100] for elem in vertices] 
+        unsafe_set = unsafe_set + [vertices_upper + vertices_lower]
         unsafe_set_list.append(unsafe_set)
     data['unsafeSet'] = unsafe_set_list
 
@@ -178,7 +180,7 @@ if __name__ == "__main__":
     # scene = importlib.import_module(input_fn) 
     # obs, init, goal = scene.problem()
     
-    fn = 'scenario_obstacles'
+    fn = './scene_generator/random_scenarios/scenario_obstacles'
 
     f = open(fn, 'rb')
     obs, init, goal = pickle.load(f)

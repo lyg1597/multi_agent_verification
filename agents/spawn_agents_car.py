@@ -7,10 +7,11 @@ import time
 import copy
 import sys
 import json
+import pypoman as ppm 
 
 import rospy
 from std_msgs.msg import Float32MultiArray, MultiArrayDimension
-from verification_msg.msg import StateVisualizeMsg, ReachtubeMsg, VerificationResultMsg
+from verification_msg.msg import StateVisualizeMsg, ReachtubeMsg, VerificationResultMsg, Obstacle
 from verification_msg.srv import UnsafeSetSrv, UnsafeSetSrvResponse
 
 from agent_car import AgentCar
@@ -129,13 +130,19 @@ class AgentData:
     
     def plot_unsafe(self, ax):
         for i in range(len(self.unsafeset_list)):
-            box = self.unsafeset_list[i]
-            x = min(box[0][0], box[1][0])
-            y = min(box[0][1], box[1][1])
-            width = abs(box[0][0] - box[1][0])
-            height = abs(box[0][1] - box[1][1])
-            rect = patches.Rectangle((x,y), width, height, edgecolor = '#d9d9d9', facecolor = '#d9d9d9')
-            ax.add_patch(rect)
+            unsafe = self.unsafeset_list[i]
+            if unsafe[0] == "box" or unsafe[0] == "Box":
+                box = unsafe[1]
+                x = min(box[0][0], box[1][0])
+                y = min(box[0][1], box[1][1])
+                width = abs(box[0][0] - box[1][0])
+                height = abs(box[0][1] - box[1][1])
+                rect = patches.Rectangle((x,y), width, height, edgecolor = '#d9d9d9', facecolor = '#d9d9d9')
+                ax.add_patch(rect)
+            elif unsafe[0] == "vertices" or unsafe[0] == "Vertices":
+                vertices = np.array(unsafe[1])
+                vertices = vertices[:,:2]
+                ppm.polygon.plot_polygon(np.array(vertices), color = '#d9d9d9')
 
     def generate_figure(self, fn):
         plt.figure()
@@ -261,8 +268,9 @@ if __name__ == "__main__":
         num_agents = len(agent_data['agents'])
         # Handle unsafe sets
         unsafe_sets = agent_data['unsafeSet']
-        for unsafe in unsafe_sets:
-            unsafeset_list.append(unsafe[1])
+        # for unsafe in unsafe_sets:
+        #     unsafeset_list.append(unsafe[1])
+        unsafeset_list = unsafe_sets
         # Handle waypoints
         for i in range(num_agents):
             agent = agent_data['agents'][i]
@@ -272,7 +280,7 @@ if __name__ == "__main__":
             wp = get_waypoints(init_mode_id, edge_list, mode_list)
             wp_list.append(wp)
     else: 
-        num_agents = 100
+        num_agents = 5
         
         raw_wp_list = [
             [20.0, 5.0, 20.0, 10.0],
@@ -310,24 +318,33 @@ if __name__ == "__main__":
                 raw_unsafeset = copy.deepcopy(raw_unsafeset_list[j][1])
                 raw_unsafeset[0][0] += i*12
                 raw_unsafeset[1][0] += i*12
-                unsafeset_list.append(raw_unsafeset)
+                unsafeset_list.append([raw_unsafeset_list[j][0],raw_unsafeset])
             wp_list.append(wp1)
 
     # tmp = unsafeset_list
     # unsafeset_list = []
     set_unsafeset = rospy.ServiceProxy('set_unsafe', UnsafeSetSrv)
-    unsafe_array = np.array(unsafeset_list)
-    unsafe_shape = unsafe_array.shape
-    dim_list = []
-    for i in range(len(unsafe_shape)):
-        dim = MultiArrayDimension()
-        dim.size = unsafe_shape[i]
-        dim_list.append(dim)
-    unsafe_msg = Float32MultiArray()
-    unsafe_msg.layout.dim = dim_list 
-    unsafe_msg.data = unsafe_array.flatten().tolist()
+    obstacle_list = []
+    for obstacle in unsafeset_list:
+        obstacle_type = obstacle[0]
+        unsafe_array = np.array([])
+        if obstacle_type == "Box" or obstacle_type == "box":
+            unsafe_array = np.array(obstacle[1])
+        elif obstacle_type == "Vertices" or obstacle_type == "vertices":
+            unsafe_array = np.array(obstacle[1])
+        unsafe_shape = unsafe_array.shape
+        dim_list = []
+        for i in range(len(unsafe_shape)):
+            dim = MultiArrayDimension()
+            dim.size = unsafe_shape[i]
+            dim_list.append(dim)
+        obstacle_data = Float32MultiArray()
+        obstacle_data.layout.dim = dim_list 
+        obstacle_data.data = unsafe_array.flatten().tolist()
+        obstacle_msg = Obstacle(obstacle = obstacle_data, obstacle_type = obstacle_type)
+        obstacle_list.append(obstacle_msg)
 
-    set_unsafeset(unsafe_list=unsafe_msg, type = 'Box')
+    set_unsafeset(obstacle_list=obstacle_list)
 
     # unsafeset_list = tmp
     agent_data = AgentData(num_agents, unsafeset_list)

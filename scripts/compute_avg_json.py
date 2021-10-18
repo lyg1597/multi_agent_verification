@@ -1,7 +1,7 @@
 import numpy as np 
 import json 
 
-# fn = './data/res_car2_nocache.json'
+# fn = './data/res_car3_nocache.json'
 fn = './res.json'
 with open(fn, 'r') as f:
     res = json.load(f)

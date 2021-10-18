@@ -1,4 +1,5 @@
-std_msgs/Float32MultiArray unsafe_list
-string type
+# std_msgs/Float32MultiArray unsafe_list
+# string type
+verification_msg/Obstacle[] obstacle_list
 ---
 int64 res

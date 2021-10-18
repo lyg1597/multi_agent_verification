@@ -53,6 +53,7 @@ add_message_files(
   StateVisualizeMsg.msg
   ReachtubeMsg.msg
   VerificationResultMsg.msg
+  Obstacle.msg
 )
 
 ## Generate services in the 'srv' folder

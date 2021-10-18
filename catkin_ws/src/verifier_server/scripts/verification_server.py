@@ -6,7 +6,7 @@ from verification_msg.srv import VerifierSrv,VerifierSrvResponse, UnsafeSetSrv, 
 from dryvr_utils.dryvr_utils import DryVRUtils
 from std_msgs.msg import MultiArrayDimension
 import rospy
-from verification_msg.msg import ReachtubeMsg
+from verification_msg.msg import ReachtubeMsg, Obstacle
 
 try:
     from common.Waypoint import Waypoint
@@ -219,10 +219,12 @@ class ReachTubeTreeNode():
         diff0 = np.linalg.norm(initset_center - initset_center0)
         diff1 = np.linalg.norm(initset_center - initset_center1)
         if diff0 < diff1:
-            self.children[0] = self.children[0].split(initset_virtual)
+            node, res = self.children[0].split(initset_virtual)
+            self.children[0] = node
         else:
-            self.children[1] = self.children[1].split(initset_virtual)
-        return self
+            node, res = self.children[1].split(initset_virtual)
+            self.children[1] = node 
+        return self, res 
 
 class ReachTubeUnion():
     def __init__(self, initset = [], plan = [], tube = [], initset_center = []):
@@ -321,15 +323,10 @@ class ReachTubeUnion():
             return None
 
     def split(self, initset_virtual):
-        print(f"number of tubes {self.num_tubes}")
+        # print(f"number of tubes {self.num_tubes}")
 
         if self.num_tubes == 1:
-            tmp_dict = {}
-            tmp_dict[2] = ReachTubeUnion(self.initset_list[0], self.plan, self.tube_list[0])
-            tmp_dict[1] = ReachTubeUnion(initset_center = np.mean(np.array(initset_virtual), axis = 0))
-            tmp_dict[1].depth = self.depth + 1
-            tmp_dict[2].depth = self.depth + 1
-            return ReachTubeTreeNode([tmp_dict[1], tmp_dict[2]])
+            return self, False
 
         center1 = np.mean(np.array(initset_virtual), axis = 0)
         center2 = self.initset_union_center
@@ -375,7 +372,7 @@ class ReachTubeUnion():
             tmp_dict[1] = ReachTubeUnion(initset_center = np.mean(np.array(initset_virtual), axis = 0))
         tmp_dict[1].depth = self.depth + 1
         tmp_dict[2].depth = self.depth + 1
-        return ReachTubeTreeNode([tmp_dict[1], tmp_dict[2]])
+        return ReachTubeTreeNode([tmp_dict[1], tmp_dict[2]]), True
 
 class DryVRRunner:
     def run_dryvr(self, init_set, plan, idx, variables_list, time_horizon, agent_dynamics):
@@ -464,7 +461,8 @@ class TubeCache:
 
     def refine(self, key, initset_virtual):
         # return
-        self.cache_dict[key] = self.cache_dict[key].split(initset_virtual)
+        tree_root, res = self.cache_dict[key].split(initset_virtual)
+        return res 
 
 class MultiAgentVerifier:
     def __init__(self):
@@ -587,14 +585,18 @@ class MultiAgentVerifier:
                 res[1][i] = np.ceil(res[1][i]/resolution[i])*resolution[i]
         return res
 
-    def verify_full(self, params: VerifierSrv):
+    def verify_full(self, params: VerifierSrv):        
+        print(params.idx, f"verification start for plan {params.plan}")
+
         self.safety_checking_lock.acquire(blocking=True)
         verification_start = time.time()
         verification_time = 0
         refine_time = 0
+        compute = False 
         for i in range(self.refine_threshold):
             verification_start = time.time()
-            res, key, initset_virtual = self.verify_cached(params)
+            res, key, initset_virtual = self.verify_cached(params, compute)
+            compute = False 
             verification_time += (time.time() - verification_start)
             if res.res == 1 or res.res == -1:
                 res.tt_time = time.time() - verification_start
@@ -604,7 +606,9 @@ class MultiAgentVerifier:
                 self.safety_checking_lock.release()
                 return res
             refine_start = time.time()
-            self.cache.refine(key, initset_virtual)
+            success = self.cache.refine(key, initset_virtual)
+            if not success:
+                compute = True 
             refine_time += (time.time() - refine_start)
         res.num_ref = i
         res.tt_time = time.time() - verification_start
@@ -613,7 +617,7 @@ class MultiAgentVerifier:
         self.safety_checking_lock.release()
         return res
 
-    def verify_cached(self, params: VerifierSrv):
+    def verify_cached(self, params: VerifierSrv, compute = False):
         total_time = time.time()
         init_set = [list(params.initset_lower), list(params.initset_upper)]
         idx = params.idx
@@ -634,7 +638,7 @@ class MultiAgentVerifier:
         
         # print(initset_virtual)
         from_cache = False 
-        if self.cache.in_cache(initset_virtual, plan_virtual, agent_dynamics):
+        if self.cache.in_cache(initset_virtual, plan_virtual, agent_dynamics) and not compute:
             # print("cache hit")
             tube_virtual = self.cache.get(initset_virtual, plan_virtual, agent_dynamics)
             from_cache = True
@@ -644,6 +648,9 @@ class MultiAgentVerifier:
             tube, trace = self.cache.compute_tube(init_set, plan, idx, variables_list, time_horizon, agent_dynamics)
             tube_virtual = self.cache.transform_tube_to_virtual(tube, transform_information, dynamics_funcs)
             # tube_virtual, trace = self.cache.compute_tube(initset_virtual, plan_virtual, idx, variables_list, time_horizon, agent_dynamics)
+            initset_poly = pc.box2poly(np.array(init_set).T)
+            initset_virtual_poly = dynamics_funcs.transform_poly_to_virtual(initset_poly, transform_information)
+            initset_virtual = np.column_stack(initset_virtual_poly.bounding_box).T
             self.cache.add(initset_virtual, plan_virtual, agent_dynamics, tube_virtual)
             from_cache = False 
             # self.cache.add(initset_virtual, plan_virtual, agent_dynamics, tube)
@@ -725,28 +732,34 @@ class MultiAgentVerifier:
         print("Unsafe set received")
         print("Clear previous unsafe set")
         self.unsafeset_list = []
-        unsafe_type = params.type
-        unsafe_msg = params.unsafe_list
-        shape = []
-        for i in range(len(unsafe_msg.layout.dim)):
-            shape.append(unsafe_msg.layout.dim[i].size)
-        shape = tuple(shape)
-        unsafe_list = np.array(unsafe_msg.data).reshape(shape).tolist()
-        if unsafe_type == "Box" or unsafe_type == "box":
-            for box in unsafe_list:
-                # print(box)
-                poly = pc.box2poly(np.array(box).T)
+        # unsafe_type = params.type
+        # unsafe_msg = params.unsafe_list
+        unsafe_list = params.obstacle_list
+        for unsafe in unsafe_list:
+            shape = []
+            for i in range(len(unsafe.obstacle.layout.dim)):
+                shape.append(unsafe.obstacle.layout.dim[i].size)
+            shape = tuple(shape)
+            obstacle = np.array(unsafe.obstacle.data).reshape(shape)
+            unsafe_type = unsafe.obstacle_type
+            if unsafe_type == "Box" or unsafe_type == "box":
+                # for box in unsafe_list:
+                    # print(box)
+                poly = pc.box2poly(obstacle.T)
                 self.unsafeset_list.append(poly)
-        else:
-            print('Unknown unsafe set type. Return')
-            return UnsafeSetSrvResponse(res = 0)
+            elif unsafe_type == "Vertices" or unsafe_type == "vertices":
+                poly = pc.qhull(obstacle)
+                self.unsafeset_list.append(poly)
+            else:
+                print('Unknown unsafe set type. Return')
+                return UnsafeSetSrvResponse(res = 0)
         print('Unsafe set successfuly set')
         return UnsafeSetSrvResponse(res = 1)
 
     def start_verifier_server(self):
         rospy.init_node('verifier_server')
         print(os.path.realpath(__file__))
-        verify_service = rospy.Service('verify', VerifierSrv, self.verify_nocache)
+        verify_service = rospy.Service('verify', VerifierSrv, self.verify_full)
         print("Verification Server Started")
         unsafe_service = rospy.Service('set_unsafe', UnsafeSetSrv, self.process_unsafeset)
         rospy.Service('print_tree', CacheInfoSrv,self.print_cache_info)
