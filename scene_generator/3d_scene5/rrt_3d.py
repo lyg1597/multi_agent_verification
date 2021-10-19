@@ -72,7 +72,7 @@ class RRT3D:
     def __init__(self, start, goal_list, obstacle_list, rand_area, color = 'b',
                  expand_dis=[3.0], expand_theta = [0,np.pi/4,np.pi/2, 3*np.pi/4,np.pi,5*np.pi/4, 3*np.pi/2, 7*np.pi/4], 
                  expand_omega = [0,np.pi/2,np.pi,3*np.pi/2],
-                 path_resolution=0.01, goal_sample_rate=0, max_iter= 5000):
+                 path_resolution=0.5, goal_sample_rate=0, max_iter= 5000):
         """
         Setting Parameter
 
@@ -159,6 +159,7 @@ class RRT3D:
                 if idx not in self.reach_node_idx:
                     self.goal_list[idx].reached = True
                     self.reach_node_idx.append(idx)
+                break
                 # pass 
                 # return self.generate_final_course(len(self.node_list) - 1) ,i
 

@@ -385,7 +385,7 @@ def problem():
 
     #TODO: Create initial set
     b0 = np.array([[-5], [7], [-41], [42], [-17], [19]])
-    Theta = (A_rect, b0)
+    Theta = [(A_rect, b0)]
     #TODO: Create goal set
     tmp_g = [np.array([[- 3], [9], [-15], [21], [-3], [9]]),
     np.array([[-15], [21], [-3], [9], [-27], [33]]),
@@ -487,8 +487,8 @@ if __name__ == '__main__':
     for A,b in goal:
         plot_polytope_3d(A, b, ax = axes, color = 'green')
 
-    
-    plot_polytope_3d(Theta[-00], Theta[1], ax = axes, color = 'blue')
+    for A,b in Theta:
+        plot_polytope_3d(A, b, ax = axes, color = 'blue')
 
     plot_line_3d([0,0,0], [0,0,18],ax = axes)
     # plt.xlim(0, 24)
