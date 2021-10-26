@@ -149,7 +149,7 @@ class RRT3D:
 
             if animation and i % 1000 == 0:
                 print(i)
-                # self.draw_graph(rnd_node)
+                self.draw_graph(rnd_node)
 
             safe, idx = self.in_goal(self.node_list[-1].x, self.node_list[-1].y, self.node_list[-1].z, self.goal_list)
             if safe:
@@ -272,6 +272,13 @@ class RRT3D:
         for (A,b) in self.obstacle_list:
             vtc = ppm.compute_polytope_vertices(A[0:4,0:2],b[0:4,:])
             ppm.plot_polygon(vtc, color = 'r')
+            '''
+            plt.plot(ox, oy, "ok", ms=30 * size)
+            '''
+
+        for goal in self.goal_list:
+            vtc = ppm.compute_polytope_vertices(goal.A[0:4,0:2],goal.b[0:4,:])
+            ppm.plot_polygon(vtc, color = 'g')
             '''
             plt.plot(ox, oy, "ok", ms=30 * size)
             '''

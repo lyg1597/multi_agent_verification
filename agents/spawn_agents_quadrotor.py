@@ -7,10 +7,13 @@ import time
 import copy
 import sys
 import json
+import pypoman as ppm
+import polytope as pc
+import pickle
 
 import rospy
 from std_msgs.msg import Float32MultiArray, MultiArrayDimension
-from verification_msg.msg import StateVisualizeMsg, ReachtubeMsg, VerificationResultMsg
+from verification_msg.msg import StateVisualizeMsg, ReachtubeMsg, VerificationResultMsg, Obstacle
 from verification_msg.srv import UnsafeSetSrv, UnsafeSetSrvResponse
 
 from agent_car import AgentCar
@@ -76,6 +79,7 @@ class AgentData:
         self.done_list[idx] = True
 
     def state_handler(self, msg, idx):
+        # print(msg, idx)
         state = msg.state
         plan = msg.plan
         self.agent_state_dict[idx].append(state)
@@ -87,14 +91,21 @@ class AgentData:
         # print(self.agent_state_dict[idx][-1])
 
     def reachtube_handler(self, msg):
+        # print(msg.from_cache)
         idx = msg.idx 
         shape = (msg.tube.layout.dim[0].size, msg.tube.layout.dim[1].size, msg.tube.layout.dim[2].size)
         tube = np.array(msg.tube.data).reshape(shape).tolist() 
         plan = msg.plan 
         from_cache = msg.from_cache
-        self.tube_plan[idx] = plan
-        self.tube[idx] = tube
-        self.tube_cached[idx] = from_cache
+        if idx in self.tube_plan:
+            self.tube_plan[idx].append(plan)
+            self.tube[idx].append(tube)
+            self.tube_cached[idx].append(from_cache)
+        else:
+            self.tube_plan[idx] = [plan]
+            self.tube[idx] = [tube]
+            self.tube_cached[idx] = [from_cache]
+            
         # print(tube)
         pass
 
@@ -108,6 +119,7 @@ class AgentData:
         
     def plot_tube(self, ax, tube, from_cache = 0):
         # print(len(tube))
+        # print(from_cache)
         for i in range(0,len(tube),5):
             box = tube[i]
             x = min(box[0][0], box[1][0])
@@ -123,13 +135,47 @@ class AgentData:
     
     def plot_unsafe(self, ax):
         for i in range(len(self.unsafeset_list)):
-            box = self.unsafeset_list[i]
-            x = min(box[0][0], box[1][0])
-            y = min(box[0][1], box[1][1])
-            width = abs(box[0][0] - box[1][0])
-            height = abs(box[0][1] - box[1][1])
-            rect = patches.Rectangle((x,y), width, height, edgecolor = '#d9d9d9', facecolor = '#d9d9d9')
-            ax.add_patch(rect)
+            unsafe = self.unsafeset_list[i]
+            if unsafe[0] == "box" or unsafe[0] == "Box":
+                box = unsafe[1]
+                x = min(box[0][0], box[1][0])
+                y = min(box[0][1], box[1][1])
+                width = abs(box[0][0] - box[1][0])
+                height = abs(box[0][1] - box[1][1])
+                rect = patches.Rectangle((x,y), width, height, edgecolor = '#d9d9d9', facecolor = '#d9d9d9')
+                ax.add_patch(rect)
+            elif unsafe[0] == "vertices" or unsafe[0] == "Vertices":
+                vertices = np.array(unsafe[1])
+                vertices = vertices[:,:2]
+                ppm.polygon.plot_polygon(np.array(vertices), color = '#d9d9d9')
+            elif unsafe[0] == "Matrix" or unsafe[0] == "mtrix":
+                A = np.array(unsafe[1][0])[:-6,:3]
+                b = np.array(unsafe[1][1])[:-6,:]
+                unsafe_poly = pc.Polytope(A,b)
+                unsafe_poly_project = pc.projection(unsafe_poly, [1,2])
+                vtc = ppm.compute_polytope_vertices(unsafe_poly_project.A,unsafe_poly_project.b)
+                ppm.plot_polygon(vtc, color = '#d9d9d9')
+
+    def generate_figure(self, fn):
+        plt.figure(figsize=(1920/100, 1080/100), dpi=100)
+        ax = plt.gca()
+        self.plot_unsafe(ax)
+        for agent_idx in range(self.num_agent):
+            agent_plan_list = self.tube_plan[agent_idx]
+            agent_tube_list = self.tube[agent_idx]
+            agent_cached_list = self.tube_cached[agent_idx]
+            for i in range(len(agent_plan_list)):
+                tube = agent_tube_list[i]
+                plan = agent_plan_list[i]
+                cached = agent_cached_list[i]
+                plt.plot([plan[0], plan[3]], [plan[1], plan[4]], color = '#8dd3c7')
+                self.plot_tube(ax, tube, from_cache=cached)
+            agent_trajectory = self.agent_state_dict[agent_idx]
+            agent_array = np.array(agent_trajectory)
+            plt.plot(agent_array[:,0], agent_array[:,1], color = '#fb8072', marker = '.')
+
+        # plt.show()
+        plt.savefig(fn, dpi = 300)
 
     def visualize_agent_data(self):
         i = 0
@@ -175,18 +221,18 @@ class AgentData:
 
                     if idx in self.tube:
                         if idx in self.plotted_tube:
-                            if self.plotted_tube[idx] != self.tube_plan[idx]:
+                            if self.plotted_tube[idx] != self.tube_plan[idx][-1]:
                                 # print(f'agent{idx} plot tube')
-                                tube = self.tube[idx]
-                                from_cache = self.tube_cached[idx]
+                                tube = self.tube[idx][-1]
+                                from_cache = self.tube_cached[idx][-1]
                                 self.plot_tube(ax, tube, from_cache)
-                                self.plotted_tube[idx] = self.tube_plan[idx]
+                                self.plotted_tube[idx] = self.tube_plan[idx][-1]
                         else:
                             # print(f'agent{idx} plot tube')
-                            tube = self.tube[idx]
-                            from_cache = self.tube_cached[idx]
+                            tube = self.tube[idx][-1]
+                            from_cache = self.tube_cached[idx][-1]
                             self.plot_tube(ax, tube, from_cache)
-                            self.plotted_tube[idx] = self.tube_plan[idx]
+                            self.plotted_tube[idx] = self.tube_plan[idx][-1]
                     
             plt.pause(0.000001)
             i+=1
@@ -197,7 +243,14 @@ class AgentData:
                 plt.savefig('./res_fig.png')
                 plt.close()
                 f = open('res.json', 'w+')
+                self.generate_figure("./res_fig.png")
                 json.dump(self.results, f)
+                with open('agent_plan','wb+') as f:
+                    pickle.dump(self.agent_plan_dict,f)
+                with open('agent_state','wb+') as f:
+                    pickle.dump(self.agent_state_dict,f)
+                with open('agent_tube','wb+') as f:
+                    pickle.dump((self.tube, self.tube_cached, self.tube_plan),f)
                 return 
 
             if rospy.is_shutdown():
@@ -233,8 +286,9 @@ if __name__ == "__main__":
         num_agents = len(agent_data['agents'])
         # Handle unsafe sets
         unsafe_sets = agent_data['unsafeSet']
-        for unsafe in unsafe_sets:
-            unsafeset_list.append(unsafe[1])
+        # for unsafe in unsafe_sets:
+        #     unsafeset_list.append(unsafe[1])
+        unsafeset_list = unsafe_sets
         # Handle waypoints
         for i in range(num_agents):
             agent = agent_data['agents'][i]
@@ -290,29 +344,43 @@ if __name__ == "__main__":
                 raw_wp = copy.deepcopy(raw_wp_list[j])
                 raw_wp[0] += i*12
                 raw_wp[3] += i*12
-                wp1.append(Waypoint('follow_waypoint',raw_wp,4.0,0))
+                wp1.append(Waypoint('follow_waypoint',raw_wp,3.0,0))
             for j in range(len(raw_unsafeset_list)):
                 raw_unsafeset = copy.deepcopy(raw_unsafeset_list[j][1])
                 raw_unsafeset[0][0] += i*12
                 raw_unsafeset[1][0] += i*12
-                unsafeset_list.append(raw_unsafeset)
+                unsafeset_list.append([raw_unsafeset_list[j][0],raw_unsafeset])
             wp_list.append(wp1)
 
     # tmp = unsafeset_list
     # unsafeset_list = []
     set_unsafeset = rospy.ServiceProxy('set_unsafe', UnsafeSetSrv)
-    unsafe_array = np.array(unsafeset_list)
-    unsafe_shape = unsafe_array.shape
-    dim_list = []
-    for i in range(len(unsafe_shape)):
-        dim = MultiArrayDimension()
-        dim.size = unsafe_shape[i]
-        dim_list.append(dim)
-    unsafe_msg = Float32MultiArray()
-    unsafe_msg.layout.dim = dim_list 
-    unsafe_msg.data = unsafe_array.flatten().tolist()
+    obstacle_list = []
+    for obstacle in unsafeset_list:
+        obstacle_type = obstacle[0]
+        unsafe_array = np.array([])
+        if obstacle_type == "Box" or obstacle_type == "box":
+            unsafe_array = np.array(obstacle[1])
+        elif obstacle_type == "Vertices" or obstacle_type == "vertices":
+            unsafe_array = np.array(obstacle[1])
+        elif obstacle_type == "Matrix" or obstacle_type == "matrix":
+            unsafe_A = np.array(obstacle[1][0])
+            unsafe_b = np.array(obstacle[1][1])
+            unsafe_array = np.concatenate((unsafe_A, unsafe_b), axis = 1)
 
-    set_unsafeset(unsafe_list=unsafe_msg, type = 'Box')
+        unsafe_shape = unsafe_array.shape
+        dim_list = []
+        for i in range(len(unsafe_shape)):
+            dim = MultiArrayDimension()
+            dim.size = unsafe_shape[i]
+            dim_list.append(dim)
+        obstacle_data = Float32MultiArray()
+        obstacle_data.layout.dim = dim_list 
+        obstacle_data.data = unsafe_array.flatten().tolist()
+        obstacle_msg = Obstacle(obstacle = obstacle_data, obstacle_type = obstacle_type)
+        obstacle_list.append(obstacle_msg)
+
+    set_unsafeset(obstacle_list=obstacle_list)
 
     # unsafeset_list = tmp
     agent_data = AgentData(num_agents, unsafeset_list)

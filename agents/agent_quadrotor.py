@@ -53,6 +53,8 @@ class AgentQuadrotor:
         self.refine_time = []
         self.server_verify_time = []
 
+        self.retry_threshold = 10
+
     def func1(self, t, vars, u):
         u1 = u[0]
         u2 = u[1]
@@ -351,12 +353,13 @@ class AgentQuadrotor:
             trace.append([t])
             trace[i].extend(val[3:])  # remove the reference trajectory from the trace
 
-            time.sleep(time_step*10)
+            time.sleep(time_step*5)
 
             curr_state = StateVisualizeMsg()
             curr_state.state = [val[0], val[1]]
             curr_state.plan = curr_plan
             # print(f"agent{self.idx}: publish state: {curr_state}")
+            # print(self.idx, curr_state)
             self.state_publisher.publish(curr_state)
 
         return trace
@@ -393,7 +396,7 @@ class AgentQuadrotor:
         dynamics = "dryvr_dynamics/NNquadrotor_new_code_TR"
         time_horizon = plan.time_bound
         variables_list = ['x', 'y', 'z', 'vx', 'vy', 'vz']
-
+        print(init_set)
         # self.safety_checking_lock.acquire(blocking=True)
         res = verify(
             initset_lower = init_set[0], 
@@ -403,7 +406,7 @@ class AgentQuadrotor:
             idx = idx, 
             dynamics = dynamics,
             variables_list = variables_list,
-            initset_resolution = [0.5,0.5,0.5,0.1,0.1,0.1]
+            initset_resolution = [0.5,0.5,0.5,0.01,0.01,0.01]
         )
         # self.safety_checking_lock.release()
         reachtube_time = res.rt_time 
@@ -428,7 +431,10 @@ class AgentQuadrotor:
         curr_init_set = self.init_state 
         all_trace = []
         res = "Safe"
-        for i in range(len(self.waypoint_list)):
+        i = 0
+        j = 0
+
+        while i < len(self.waypoint_list):
             start_time = time.time()
             current_plan = self.waypoint_list[i]
             print(f'Start verifying plan for agent {self.idx}')
@@ -437,17 +443,22 @@ class AgentQuadrotor:
                 idx = self.idx, 
                 plan = current_plan, 
                 init_set = [
-                    [curr_init_set[0]-1, curr_init_set[1]-1, curr_init_set[2]-1, curr_init_set[3]-0.5, curr_init_set[4]-0.5, curr_init_set[5]-0.5],
-                    [curr_init_set[0]+1, curr_init_set[1]+1, curr_init_set[2]+1, curr_init_set[3]+0.5, curr_init_set[4]+0.5, curr_init_set[5]+0.5],
+                    [curr_init_set[0]-0.5, curr_init_set[1]-0.5, curr_init_set[2]-0.5, curr_init_set[3]-0.001, curr_init_set[4]-0.001, curr_init_set[5]-0.001],
+                    [curr_init_set[0]+0.5, curr_init_set[1]+0.5, curr_init_set[2]+0.5, curr_init_set[3]+0.001, curr_init_set[4]+0.001, curr_init_set[5]+0.001],
                 ]
             )
             self.verification_time.append(time.time() - verifier_start)
-            print(f'Done verifying plan for agent {self.idx}')
+            print(f'Done verifying plan for agent {self.idx}, {time.time() - verifier_start}')
 
             if res != 'Safe':
-                print(f"agent{self.idx} plan unsafe")
-                self.stop_agent()
-                break
+                print(f"agent{self.idx} plan unsafe, wait and retry")
+                if j > self.retry_threshold:
+                    print(f"agent{self.idx} plan unsafe")
+                    self.stop_agent()
+                    break
+                time.sleep(5)
+                j += 1
+                continue
             
             trace = self.TC_Simulate(current_plan.mode_parameters, curr_init_set, current_plan.time_bound)
             # plt.plot(trace[:,1], trace[:,2])
@@ -456,6 +467,7 @@ class AgentQuadrotor:
             all_trace += trace.tolist()
             curr_init_set = [trace[-1][1], trace[-1][2], trace[-1][3], trace[-1][4], trace[-1][5], trace[-1][6]]
             self.segment_time.append(time.time() - start_time)
+            i += 1
 
         result = VerificationResultMsg()
         result.idx = self.idx

@@ -145,7 +145,7 @@ class AgentData:
                 ppm.polygon.plot_polygon(np.array(vertices), color = '#d9d9d9')
 
     def generate_figure(self, fn):
-        plt.figure()
+        plt.figure(figsize=(1920/100, 1080/100), dpi=100)
         ax = plt.gca()
         self.plot_unsafe(ax)
         for agent_idx in range(self.num_agent):
@@ -163,7 +163,8 @@ class AgentData:
             plt.plot(agent_array[:,0], agent_array[:,1], color = '#fb8072', marker = '.')
 
         # plt.show()
-        plt.savefig(fn)
+        # plt.set_size_inch()
+        plt.savefig(fn, dpi = 300)
 
     def visualize_agent_data(self):
         i = 0
@@ -382,6 +383,7 @@ if __name__ == "__main__":
         p = threading.Thread(target = agent.execute_plan)
         p.start()
         agent_process_list.append(p)
+        time.sleep(1)
     
     for p in agent_process_list:
         p.join()

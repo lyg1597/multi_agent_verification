@@ -160,7 +160,7 @@ def run_planner(obs, init_list, goal_list, search_area, color = 'b'):
                     rand_area=search_area,
                     obstacle_list=obs,
                     # expand_theta= [0,np.pi/3,np.pi/2,2*np.pi/3,np.pi,4*np.pi/3, 3*np.pi/2, 5*np.pi/3],
-                    expand_dis=[3], max_iter = 10000, color = color)
+                    expand_dis=[3], max_iter = 30000, color = color)
         path,edges = rrt.planning(animation = True)
         
         if len(path)!=0:
@@ -191,10 +191,10 @@ def bloat_scene(obs, init, goal, factor):
 if __name__ == "__main__":
     # input_fn = sys.argv[1]
     # output_fn = sys.argv[2]
-    input_fn = '3d_scene4'
+    input_fn = 'testplot'
     output_fn = 'scene_3d_complex.json'
 
-    search_area = [0, 72, 0, 72, 0, 36]
+    search_area = [0, 125, 0, 96, 0, 18]
     # fp, path, desc = importlib.find_module(input_fn) 
     scene = importlib.import_module(input_fn) 
     obs, init, goal = scene.problem()
@@ -227,11 +227,11 @@ if __name__ == "__main__":
         
     for (A,b) in goal:
         vtc = ppm.compute_polytope_vertices(A[0:4,0:2],b[0:4,:])
-        ppm.plot_polygon(vtc, color = 'r')
+        ppm.plot_polygon(vtc, color = 'g')
 
     for (A,b) in init:
         vtc = ppm.compute_polytope_vertices(A[0:4,0:2],b[0:4,:])
-        ppm.plot_polygon(vtc, color = 'r')
+        ppm.plot_polygon(vtc, color = 'b')
     
     # # for path in path_list:
     # #     path = np.array(path)

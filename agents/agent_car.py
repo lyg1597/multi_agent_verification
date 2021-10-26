@@ -39,6 +39,7 @@ class AgentCar:
         self.num_refine = []
         self.refine_time = []
         self.server_verify_time = []
+        self.retry_threshold = 10
 
     def dynamics(self, t, state, mode_parameters):
         v = mode_parameters[2]
@@ -101,7 +102,7 @@ class AgentCar:
             i += 1
             trace.append([t])
             trace[i].extend(val[0:3])
-            time.sleep(time_step*10)
+            time.sleep(time_step*5)
 
             curr_state = StateVisualizeMsg()
             curr_state.state = [val[0], val[1]]
@@ -144,7 +145,7 @@ class AgentCar:
         trace = trace[:,0:4]
         return np.array(trace)
 
-    def verifier(self, idx, plan, init_set):
+    def verifier(self, idx, plan: Waypoint, init_set):
         rospy.wait_for_service('verify')
         verify = rospy.ServiceProxy('verify', VerifierSrv)
         dynamics = "dryvr_dynamics/NN_car_TR_noNN"
@@ -185,7 +186,10 @@ class AgentCar:
         curr_init_set = self.init_state 
         all_trace = []
         res = "Safe"
-        for i in range(len(self.waypoint_list)):
+        i = 0
+        j = 0
+        
+        while i < len(self.waypoint_list):
             start_time = time.time()
             current_plan = self.waypoint_list[i]
             print(f'Start verifying plan for agent {self.idx}')
@@ -198,13 +202,21 @@ class AgentCar:
                     [curr_init_set[0]+1, curr_init_set[1]+1, curr_init_set[2]+0.01]
                 ]
             )
-            self.verification_time.append(time.time() - verifier_start)
-            print(f'Done verifying plan for agent {self.idx}')
+            verification_time = time.time() - verifier_start
+            self.verification_time.append(verification_time)
+            print(f'Done verifying plan for agent {self.idx}, time {verification_time}')
 
             if res != 'Safe':
-                print(f"agent{self.idx} plan unsafe")
-                self.stop_agent()
-                break
+                if j > self.retry_threshold:
+                    print(f"agent{self.idx} plan unsafe")
+                    self.stop_agent()
+                    break
+                time.sleep(15)
+                self.segment_time.append(time.time() - start_time)
+                j += 1
+                continue
+            else:
+                j = 0
             
             trace = self.TC_Simulate(current_plan.mode_parameters, curr_init_set, current_plan.time_bound)
             # plt.plot(trace[:,1], trace[:,2])
@@ -214,6 +226,7 @@ class AgentCar:
             curr_init_set = [trace[-1][1], trace[-1][2], trace[-1][3]]
 
             self.segment_time.append(time.time() - start_time)
+            i += 1
 
         result = VerificationResultMsg()
         result.idx = self.idx
