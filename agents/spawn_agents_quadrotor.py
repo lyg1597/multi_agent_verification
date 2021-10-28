@@ -306,7 +306,7 @@ if __name__ == "__main__":
             wp = get_waypoints(init_mode_id, edge_list, mode_list)
             wp_list.append(wp)
     else: 
-        num_agents = 1
+        num_agents = 5
         
         # raw_wp_list = [
         #     [20.0, 5.0, 20.0, 10.0],

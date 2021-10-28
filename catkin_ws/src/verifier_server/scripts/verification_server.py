@@ -580,6 +580,8 @@ class TubeCache:
     def in_cache2(self, initset_virtual, plan_virtual, agent_dynamics):
         # return False
         key = (tuple(plan_virtual), agent_dynamics)
+        print(key)
+        print(self.cache_dict)
         if key not in self.cache_dict:
             return False, None 
 
@@ -720,13 +722,16 @@ class MultiAgentVerifier:
         bloated_tube = self.seg_bloat_tube(tube, 1)
         for unsafe_poly in self.unsafeset_list:
             intersect = False 
+            # tmp = pc.projection(unsafe_poly, [1,2,3])
             for rect in bloated_tube:
-                intersect = self.check_intersection(rect, unsafe_poly)
+                tmp2 = [rect[0][:3],rect[1][:3]]
+                intersect = self.check_intersection(tmp2, unsafe_poly)
                 if intersect:
                     break
             if intersect:
+                tmp2 = [rect[0][:3],rect[1][:3]]
                 for rect in tube:
-                    intersect = self.check_intersection(rect, unsafe_poly)
+                    intersect = self.check_intersection(tmp2, unsafe_poly)
                     if intersect: 
                         return False 
         return True
@@ -747,7 +752,9 @@ class MultiAgentVerifier:
                     intersect = False
                     for rect in bloated_tube:
                         for other_rect in bloated_other_tube:
-                            intersect = self.check_intersection(rect, other_rect)
+                            tmp1 = [rect[0][:3],rect[1][:3]]
+                            tmp2 = [other_rect[0][:3],other_rect[1][:3]]
+                            intersect = self.check_intersection(tmp1, tmp2)
                             if intersect:
                                 break 
                         if intersect:
@@ -801,115 +808,6 @@ class MultiAgentVerifier:
                 res[0][i] = np.floor(res[0][i]/resolution[i])*resolution[i]
                 res[1][i] = np.ceil(res[1][i]/resolution[i])*resolution[i]
         return res
-
-    def verify_full_multi(self, params: VerifierSrv):        
-        print(params.idx, f"verification start for plan {params.plan}")
-
-        verification_start = time.time()
-        verification_time = 0
-        refine_time = 0
-        compute = False 
-        for i in range(self.refine_threshold):
-            verification_start = time.time()
-            if i == self.refine_threshold-1:
-                compute = True
-            res, key, initset_virtual = self.verify_cached_multi(params, compute)
-            compute = False 
-            verification_time += (time.time() - verification_start)
-            if res.res == 1 or res.res == -1:
-                res.tt_time = time.time() - verification_start
-                res.num_ref = i
-                res.refine_time = refine_time
-                res.verification_time = verification_time
-                print(params.idx, f"verification finished for plan {params.plan}, time {verification_time}, cache {res.from_cache}")
-                return res
-            refine_start = time.time()
-            self.cache_lock.acquire(blocking=True)
-            success = self.cache.refine(key, initset_virtual)
-            self.cache_lock.release()
-            if not success:
-                compute = True 
-            refine_time += (time.time() - refine_start)
-        res.num_ref = i
-        res.tt_time = time.time() - verification_start
-        res.refine_time = refine_time
-        res.verification_time = verification_time
-        print(params.idx, f"verification finished for plan {params.plan}, time {verification_time}, cache {res.from_cache}")
-        return res
-
-    def verify_cached_multi(self, params: VerifierSrv, compute = False):
-        total_time = time.time()
-        init_set = [list(params.initset_lower), list(params.initset_upper)]
-        idx = params.idx
-        plan = params.plan
-        agent_dynamics = params.dynamics
-        variables_list = params.variables_list
-        time_horizon = params.time_horizon
-        initset_resolution = params.initset_resolution
-
-        compute_reachtube_start = time.time()
-        dynamics_funcs = self.cache.get_agent_dynamics(agent_dynamics)
-        wp = Waypoint("follow_waypoint",plan,time_horizon,0)
-        transform_information = dynamics_funcs.get_transform_information(wp)
-        plan_virtual = dynamics_funcs.transform_mode_to_virtual(wp, transform_information)
-        initset_poly = pc.box2poly(np.array(init_set).T)
-        initset_virtual_poly = dynamics_funcs.transform_poly_to_virtual(initset_poly, transform_information)
-        initset_virtual = np.column_stack(initset_virtual_poly.bounding_box).T
-        
-        # print(initset_virtual)
-        from_cache = False 
-        if self.cache.in_cache(initset_virtual, plan_virtual, agent_dynamics) and not compute:
-            # print("cache hit")
-            self.cache_lock.acquire(blocking=True)
-            tube_virtual = self.cache.get(initset_virtual, plan_virtual, agent_dynamics)
-            self.cache_lock.release()
-            from_cache = True
-            tube = self.cache.transform_tube_from_virtual(tube_virtual, transform_information, dynamics_funcs)
-        else:
-            init_set = self.bloat_initset(init_set, resolution = initset_resolution)
-            self.reachtube_computation_lock.acquire(blocking=True)
-            tube, trace = self.cache.compute_tube(init_set, plan, idx, variables_list, time_horizon, agent_dynamics)
-            self.reachtube_computation_lock.release()
-            tube_virtual = self.cache.transform_tube_to_virtual(tube, transform_information, dynamics_funcs)
-            # tube_virtual, trace = self.cache.compute_tube(initset_virtual, plan_virtual, idx, variables_list, time_horizon, agent_dynamics)
-            initset_poly = pc.box2poly(np.array(init_set).T)
-            initset_virtual_poly = dynamics_funcs.transform_poly_to_virtual(initset_poly, transform_information)
-            initset_virtual = np.column_stack(initset_virtual_poly.bounding_box).T
-            self.cache.add(initset_virtual, plan_virtual, agent_dynamics, tube_virtual)
-            from_cache = False 
-            # self.cache.add(initset_virtual, plan_virtual, agent_dynamics, tube)
-        compute_reachtube_time = time.time() - compute_reachtube_start
-
-        # print(tube_virtual)
-        # tube = self.cache.transform_tube_from_virtual(tube_virtual, transform_information, dynamics_funcs)
-        self.publish_reachtube(idx, tube, plan, int(from_cache))
-        safety_checking_start = time.time()
-        # print(f"start checking static safety for agent {idx}")
-        res = self.check_static_safety(tube)
-        if not res:
-            safety_checking_time = time.time() - safety_checking_start
-            if from_cache:
-                return VerifierSrvResponse(res = 0, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, from_cache = int(from_cache), num_ref = 0), (tuple(plan_virtual), agent_dynamics), initset_virtual
-            else:
-                return VerifierSrvResponse(res = -1, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, from_cache = int(from_cache), num_ref = 0), (tuple(plan_virtual), agent_dynamics), initset_virtual
- 
-        self.cache_lock.acquire(blocking = True)
-        self.curr_segments[idx] = (plan, tube)
-        # print(f"start checking dynamic safety for agent {idx}")
-        res, key = self.check_dynamic_safety(idx, plan, tube)
-        self.cache_lock.release()
-        safety_checking_time = time.time() - safety_checking_start
-        # print(idx, f"verification finished for plan {plan}")
-        tt_time = time.time() - total_time
-
-        if not res:
-            self.curr_segments[idx] = (plan, [])
-            if from_cache:
-                return VerifierSrvResponse(res = 0, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, tt_time = tt_time, from_cache = int(from_cache), num_ref = 0), (tuple(plan_virtual), agent_dynamics), initset_virtual
-            else:
-                return VerifierSrvResponse(res = -1, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, tt_time = tt_time, from_cache = int(from_cache), num_ref = 0), (tuple(plan_virtual), agent_dynamics), initset_virtual
-
-        return VerifierSrvResponse(res = 1, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, tt_time = tt_time, from_cache = int(from_cache), num_ref = 0), (tuple(plan_virtual), agent_dynamics), initset_virtual
 
     def verification_server2(self, params: VerifierSrv):        
         self.cache_lock.acquire(blocking=True)
@@ -988,6 +886,7 @@ class MultiAgentVerifier:
 
         # print(tube_virtual)
         # tube = self.cache.transform_tube_from_virtual(tube_virtual, transform_information, dynamics_funcs)
+        self.publish_reachtube(idx, tube, plan, int(from_cache), res = -1)
         safety_checking_start = time.time()
         print(f"start checking static safety for agent {idx}")
         res = self.check_static_safety(tube)
@@ -1185,15 +1084,20 @@ class MultiAgentVerifier:
             if unsafe_type == "Box" or unsafe_type == "box":
                 # for box in unsafe_list:
                     # print(box)
-                poly = pc.box2poly(obstacle.T)
+                poly = pc.box2poly(obstacle[:,:3].T)
+                # poly = pc.projection(poly,[1,2,3])
                 self.unsafeset_list.append(poly)
             elif unsafe_type == "Vertices" or unsafe_type == "vertices":
-                poly = pc.qhull(obstacle)
+                poly = pc.qhull(obstacle[:,:3])
+                # poly = pc.projection(poly,[1,2,3])
                 self.unsafeset_list.append(poly)
             elif unsafe_type == "Matrix" or unsafe_type == "matrix":
                 A = obstacle[:,:-1]
                 b = obstacle[:,-1]
+                A = A[:-6,:3]
+                b = b[:-6]
                 poly = pc.Polytope(A=A, b=b)
+                # poly = pc.projection(poly,[1,2,3])
                 self.unsafeset_list.append(poly)
             else:
                 print('Unknown unsafe set type. Return')
