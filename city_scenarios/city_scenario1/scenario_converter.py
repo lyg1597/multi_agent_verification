@@ -8,7 +8,7 @@ import polytope as pc
 from plot_polytope3d import *
 import copy
 
-def convert_to_json_3D(fn = './scene.json',obs = [], init_list = [], goal = [], edge_list = {}, trans_res = 0.01):
+def convert_to_json_3D(fn = './scene.json',obs = [], init_list = [], goal_list = [], edge_list = {}, trans_res = 0.01):
     f = open(fn,'w+')
     data = {
         "reachability_engine":"",
@@ -28,7 +28,8 @@ def convert_to_json_3D(fn = './scene.json',obs = [], init_list = [], goal = [], 
         "edge_list":[],
         # "guards":[],
         # "directory":"examples/models/NN_car",
-        "initialModeID": -1
+        "initialModeID": -1,
+        "goalList":[]
     }
 
     unsafe_set_list = []
@@ -104,6 +105,32 @@ def convert_to_json_3D(fn = './scene.json',obs = [], init_list = [], goal = [], 
                 upper.append(0.5)
             initial_set = initial_set + [[lower,upper]]
         agent['initialSet'] = initial_set
+
+
+        goal_set = []
+        goal = goal_list[j]
+        if goal != None and goal != []:
+            goal_set = goal_set + ['Box']
+            goal_A = np.array(goal[0])
+            goal_b = np.array(goal[1])
+            
+            lower = []
+            upper = []
+
+            for i in range(goal_A.shape[0]//2):
+                tmp1 = round(float(goal_A[i*2,i]*goal_b[i*2,0]),2)
+                tmp2 = round(float(goal_A[i*2+1,i]*goal_b[i*2+1,0]),2)
+                if tmp1<tmp2:
+                    lower.append(tmp1)
+                    upper.append(tmp2)
+                else:
+                    lower.append(tmp2)
+                    upper.append(tmp1)
+            for i in range(3):
+                lower.append(-0.5)
+                upper.append(0.5)
+            goal_set = goal_set + [[lower,upper]]
+        agent['goalSet'] = goal_set
 
         # goal_set_list = []
         # for g in goal:
@@ -233,12 +260,12 @@ if __name__ == "__main__":
     input_fn = 'city_scene1'
     output_fn = 'scene_3d_complex.json'
 
-    search_area = [0, 250, 0, 250, 4, 30]
+    search_area = [0, 250, 0, 250, 8, 30]
     # fp, path, desc = importlib.find_module(input_fn) 
     scene = importlib.import_module(input_fn) 
     obs, init, goal = scene.problem()
 
-    obs_bloated, init_bloated, goal_bloated = bloat_scene(obs,init,goal,1.5)
+    obs_bloated, init_bloated, goal_bloated = bloat_scene(obs,init,goal,2.5)
     path_list = []
     edge_list = {}
     color = ['b','g','r']
@@ -286,4 +313,4 @@ if __name__ == "__main__":
     # axes.set_zlim(0, 36)
     plt.show()
 
-    convert_to_json_3D(fn = output_fn, obs = obs, init_list = init, goal = goal, edge_list = edge_list, trans_res = 0.5)
+    convert_to_json_3D(fn = output_fn, obs = obs, init_list = init, goal_list = goal, edge_list = edge_list, trans_res = 0.5)

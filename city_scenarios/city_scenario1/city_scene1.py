@@ -3,7 +3,7 @@
 import numpy as np
 import pypoman as ppm
 import matplotlib.pyplot as plt
-from plot_polytope3d import *
+from plot_polytope3d_vista import *
 import copy
 import polytope as pc 
 import pickle 
@@ -46,6 +46,13 @@ def parse_city_json(fn, scale = 500):
 
     #         surface_plot(x,y,z,fig)
     poly_list = []
+
+    # x_max = -float('inf')
+    # x_min = float('inf')
+    # y_max = -float('inf')
+    # y_min = float('inf')
+    # z_max = -float('inf')
+    z_min_max = -float('inf')
     for object_key in CityObjects:
         building = CityObjects[object_key]
         if len(building['geometry']) == 0:
@@ -54,18 +61,19 @@ def parse_city_json(fn, scale = 500):
         if object_type == "MultiSurface":
             boundaries = building['geometry'][0]['boundaries']
 
+            vertex_list = []
             x_max = -float('inf')
             x_min = float('inf')
             y_max = -float('inf')
             y_min = float('inf')
             z_max = -float('inf')
             z_min = float('inf')
-            vertex_list = []
             for surface in boundaries:
                 exterior_boundary = surface[0]
                 x = []
                 y = []
                 z = []
+                
                 for vertex in exterior_boundary:
                     val = vertices[vertex]
                     x.append(val[0])
@@ -85,7 +93,8 @@ def parse_city_json(fn, scale = 500):
                         z_min = val[2]
 
                     vertex_list.append(val)
-
+            if z_min > z_min_max:
+                z_min_max = z_min
             object_poly = pc.qhull(np.array(vertex_list)/scale)
             # object_poly.b = object_poly.b/scale
             # plot_polytope_3d(object_poly, ax = ax1)
@@ -93,13 +102,13 @@ def parse_city_json(fn, scale = 500):
         elif object_type == "Solid":
             boundaries = building['geometry'][0]['boundaries'][0]
 
+            vertex_list = []
             x_max = -float('inf')
             x_min = float('inf')
             y_max = -float('inf')
             y_min = float('inf')
             z_max = -float('inf')
             z_min = float('inf')
-            vertex_list = []
             for surface in boundaries:
                 exterior_boundary = surface[0]
                 x = []
@@ -124,12 +133,14 @@ def parse_city_json(fn, scale = 500):
                         z_min = val[2]
 
                     vertex_list.append(val)
-
+            if z_min > z_min_max:
+                z_min_max = z_min
             object_poly = pc.qhull(np.array(vertex_list)/scale)
             # object_poly.b = object_poly.b/scale
             # plot_polytope_3d(object_poly, ax = ax1)
             poly_list.append(object_poly)
     # plt.show()
+    print(z_min_max/scale)
     return poly_list
 
 def problem():
@@ -146,33 +157,37 @@ def problem():
 
     obstacle_poly_list = parse_city_json(fn, scale = 1000)
 
+    b = np.array([[-0], [250], [-0], [250], [1], [8]])
+        
+
     obstacles = []
+    # obstacles.append((A_rect,b))
     for poly in obstacle_poly_list:
         obstacles.append((poly.A, np.expand_dims(poly.b,1)))
 
     #TODO: Create initial set
     # [70,190],[75,240]
     b00 = [
-        np.array([[-61], [64], [-200], [203], [-4], [7]]),
-        np.array([[-71], [74], [-210], [213], [-4], [7]]),
-        np.array([[-71], [74], [-240], [243], [-4], [7]]),
-        np.array([[-227], [230], [-221], [224], [-4], [7]]),
-        np.array([[-218], [221], [-14], [17], [-4], [7]]), # 2D plan
-        np.array([[-71], [74], [-200], [203], [-4], [7]]),
-        np.array([[-71], [74], [-220], [223], [-4], [7]]),
-        np.array([[-71], [74], [-230], [233], [-4], [7]]),
-        np.array([[-40], [43], [-14], [17], [-4], [7]]),
-        np.array([[-40], [43], [-24], [27], [-4], [7]]),
-        np.array([[-40], [43], [-34], [37], [-4], [7]]),
-        np.array([[-40], [43], [-44], [47], [-4], [7]]),
-        np.array([[-40], [43], [-54], [57], [-4], [7]]),
-        np.array([[-40], [43], [-64], [67], [-4], [7]]),
-        np.array([[-218], [221], [-24], [27], [-4], [7]]),
-        np.array([[-218], [221], [-34], [37], [-4], [7]]),
-        np.array([[-218], [221], [-44], [47], [-4], [7]]),
-        np.array([[-218], [221], [-54], [57], [-4], [7]]),
-        np.array([[-222], [225], [-229], [232], [-4], [7]]),
-        np.array([[-222], [225], [-239], [242], [-4], [7]]),
+        np.array([[-61], [64], [-200], [203], [-8], [11]]),
+        np.array([[-71], [74], [-210], [213], [-8], [11]]),
+        np.array([[-71], [74], [-240], [243], [-8], [11]]),
+        np.array([[-227], [230], [-221], [224], [-8], [11]]),
+        np.array([[-218], [221], [-14], [17], [-8], [11]]), # 2D plan
+        np.array([[-71], [74], [-200], [203], [-18], [21]]),
+        np.array([[-71], [74], [-220], [223], [-18], [21]]),
+        np.array([[-71], [74], [-230], [233], [-18], [21]]),
+        np.array([[-40], [43], [-14], [17], [-24], [27]]),
+        np.array([[-40], [43], [-24], [27], [-18], [21]]),
+        np.array([[-40], [43], [-34], [37], [-24], [27]]),
+        np.array([[-40], [43], [-44], [47], [-18], [21]]),
+        np.array([[-40], [43], [-54], [57], [-24], [27]]),
+        np.array([[-40], [43], [-64], [67], [-18], [21]]),
+        np.array([[-218], [221], [-24], [27], [-24], [27]]),
+        np.array([[-218], [221], [-34], [37], [-18], [21]]),
+        np.array([[-218], [221], [-44], [47], [-24], [27]]),
+        np.array([[-218], [221], [-54], [57], [-18], [21]]),
+        np.array([[-222], [225], [-229], [232], [-24], [27]]),
+        np.array([[-222], [225], [-239], [242], [-24], [27]]),
     ]
     Theta = []
     for b in b00:
@@ -180,24 +195,24 @@ def problem():
     #TODO: Create goal set
 
     tmp_g = [
-        np.array([[-218], [224], [-11], [17], [-4], [10]]),
-        np.array([[-232], [238], [-26], [32], [-4], [10]]),
-        np.array([[-232], [238], [-84], [90], [-4], [10]]),
-        np.array([[-40], [46], [-14], [20], [-4], [10]]),
-        np.array([[-68], [74], [-200], [206], [-4], [10]]), # 2D plan
-        np.array([[-192], [198], [-103], [109], [-4], [10]]),
-        np.array([[-158], [164], [-87], [93], [-4], [10]]),
+        np.array([[-218], [224], [-11], [17], [-8], [14]]),
+        np.array([[-232], [238], [-26], [32], [-8], [14]]),
+        np.array([[-232], [238], [-84], [90], [-8], [14]]),
+        np.array([[-40], [46], [-14], [20], [-8], [14]]),
+        np.array([[-68], [74], [-200], [206], [-8], [14]]), # 2D plan
+        np.array([[-192], [198], [-103], [109], [-8], [14]]),
+        np.array([[-158], [164], [-87], [93], [-8], [14]]),
         np.array([[-118], [124], [-81], [87], [-14], [20]]),
-        np.array([[-163], [169], [-127], [133], [-4], [10]]),
-        np.array([[-144], [150], [-207], [213], [-4], [10]]),
+        np.array([[-163], [169], [-127], [133], [-8], [14]]),
+        np.array([[-144], [150], [-207], [213], [-8], [14]]),
         np.array([[-185], [191], [-202], [208], [-14], [20]]),
         np.array([[-139], [145], [-127], [133], [-14], [20]]),
-        np.array([[-175], [181], [-183], [189], [-4], [10]]),
+        np.array([[-175], [181], [-183], [189], [-8], [14]]),
         np.array([[-200], [206], [-198], [204], [-14], [20]]),
         np.array([[-62], [68], [-116], [122], [-24], [30]]),
-        np.array([[-138], [144], [-177], [183], [-4], [10]]),
-        np.array([[-99], [105], [-207], [213], [-4], [10]]),
-        np.array([[-89], [95], [-57], [63], [-4], [10]]),
+        np.array([[-138], [144], [-177], [183], [-8], [14]]),
+        np.array([[-99], [105], [-207], [213], [-8], [14]]),
+        np.array([[-89], [95], [-57], [63], [-8], [14]]),
         np.array([[-110], [116], [-51], [57], [-14], [20]]),
         np.array([[-84], [90], [-31], [37], [-14], [20]]),
     ]
@@ -210,8 +225,8 @@ def problem():
 if __name__ == '__main__':
     obs, Theta, goal = problem()
 
-    fig = plt.figure()
-    axes = fig.add_subplot(111, projection='3d')
+    # fig = plt.figure()
+    axes = pv.Plotter()
     # ax1.set_xlim(84639/scale, 84639/scale+1)
     # ax1.set_ylim(176246/scale, 176246/scale+1)
     # ax1.set_zlim(12232/scale, 12232/scale+1)
@@ -233,13 +248,13 @@ if __name__ == '__main__':
         z_min = min(z_min, np.min(z))
         z_max = max(z_max, np.max(z))
     
-    axes.set_xlim(x_min-1, x_max+1)
-    axes.set_ylim(y_min-1, y_max+1)
-    axes.set_zlim(z_min-1, z_max+1)
+    # axes.set_xlim(x_min-1, x_max+1)
+    # axes.set_ylim(y_min-1, y_max+1)
+    # axes.set_zlim(z_min-1, z_max+1)
 
     for A,b in obs:
         # ppm.polygon.plot_polygon(ppm.duality.compute_polytope_vertices(A,b), color = 'red')
-        plot_polytope_3d(A, b, ax = axes, color = '#d9d9d9', trans = 0.5)
+        plot_polytope_3d(A, b, ax = axes, color = '#d9d9d9', trans = 1, edge = True)
 
     for A,b in goal:
         plot_polytope_3d(A, b, ax = axes, color = 'green')
@@ -247,12 +262,13 @@ if __name__ == '__main__':
     for A,b in Theta:
         plot_polytope_3d(A, b, ax = axes, color = 'blue')
 
-    axes.set_xlim(0, 250)
-    axes.set_ylim(0, 250)
-    axes.set_zlim(0, 30)
+    # axes.set_xlim(0, 250)
+    # axes.set_ylim(0, 250)
+    # axes.set_zlim(0, 30)
 
-    plot_line_3d([0,0,0], [0,0,18],ax = axes)
+    # plot_line_3d([0,0,0], [0,0,18],ax = axes)
     # plt.xlim(0, 24)
     # plt.ylim(0, 24)
-    plt.grid()
-    plt.show()
+    # plt.grid()
+    # plt.show()
+    axes.show()

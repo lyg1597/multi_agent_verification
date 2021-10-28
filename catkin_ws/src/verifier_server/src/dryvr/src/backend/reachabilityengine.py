@@ -31,8 +31,8 @@ class ReachabilityEngine:
             normalizing_initial_set_radii[np.where(normalizing_initial_set_radii == 0)] = 1.0
             df = np.zeros(center_trace.shape)
             df[:, 1:] = np.transpose(points[:, :, 1] * np.reshape(normalizing_initial_set_radii, (ndims-1, 1)))
-            reachtube_segment[:, 0, :] = np.minimum(center_trace[1:, :] - df[1:, :], center_trace[:-1, :] - df[:-1, :])
-            reachtube_segment[:, 1, :] = np.maximum(center_trace[1:, :] + df[1:, :], center_trace[:-1, :] + df[:-1, :])
+            reachtube_segment[:, 0, :] = np.minimum(center_trace[1:, :] - df[1:, :], center_trace[:-1, :] - df[:-1, :])-0.25
+            reachtube_segment[:, 1, :] = np.maximum(center_trace[1:, :] + df[1:, :], center_trace[:-1, :] + df[:-1, :])+0.25
             return reachtube_segment, simulation_traces
         else:
             print('Discrepancy computation method,', method, ', is not supported!')

@@ -336,10 +336,55 @@ class AgentQuadrotor:
             u = control_input_list[idx] + ref_input[0:3] + [sc]
 
             init = trajectory[i]
-            r = ode(self.func1)
-            r.set_initial_value(init)
-            r.set_f_params(u)
-            val = r.integrate(r.t + time_step)
+            # r = ode(self.func1)
+            # r.set_initial_value(init)
+            # r.set_f_params(u)
+            # val = r.integrate(r.t + time_step)
+
+            u1 = u[0]
+            u2 = u[1]
+            u3 = u[2]
+            bx = u[3]
+            by = u[4]
+            bz = u[5]
+            sc = u[6]
+
+            sc = -1 * sc
+
+            vx = init[6]
+            vy = init[7]
+            vz = init[8]
+
+            dvx = 9.81 * np.sin(u1) / np.cos(u1)
+            dvy = -9.81 * np.sin(u2) / np.cos(u2)
+
+
+            tmp1 = dvx * math.cos(sc) - dvy * math.sin(sc)
+            tmp2 = dvx * math.sin(sc) + dvy * math.cos(sc)
+            dvx = tmp1
+            dvy = tmp2
+
+
+            dvz = u3 - 9.81
+            dx = vx
+            dy = vy
+            dz = vz
+            dref_x = bx
+            dref_y = by
+            dref_z = bz
+            # return [dref_x, dref_y, dref_z, dx, dy, dz, dvx, dvy, dvz]
+
+            val = [
+                init[0]+dref_x*time_step,
+                init[1]+dref_y*time_step,
+                init[2]+dref_z*time_step,
+                init[3]+dx*time_step,
+                init[4]+dy*time_step,
+                init[5]+dz*time_step,
+                init[6]+dvx*time_step,
+                init[7]+dvy*time_step,
+                init[8]+dvz*time_step,
+            ]
 
             t += time_step
             i += 1
@@ -456,13 +501,13 @@ class AgentQuadrotor:
                     print(f"agent{self.idx} plan unsafe")
                     self.stop_agent()
                     break
-                time.sleep(5)
+                time.sleep(15)
                 j += 1
                 continue
             
             trace = self.TC_Simulate(current_plan.mode_parameters, curr_init_set, current_plan.time_bound)
             # plt.plot(trace[:,1], trace[:,2])
-            # plt.plot([current_plan.mode_parameters[0], current_plan.mode_parameters[2]], [current_plan.mode_parameters[1], current_plan.mode_parameters[3]], 'r')
+            # plt.plot([current_plan.mode_parameters[0], curreant_plan.mode_parameters[2]], [current_plan.mode_parameters[1], current_plan.mode_parameters[3]], 'r')
             # plt.show()
             all_trace += trace.tolist()
             curr_init_set = [trace[-1][1], trace[-1][2], trace[-1][3], trace[-1][4], trace[-1][5], trace[-1][6]]

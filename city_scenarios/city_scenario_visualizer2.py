@@ -10,24 +10,6 @@ import pypoman as ppm
 import pickle 
 import pyvista as pv
 
-def surface_plot(x,y,z,fig):
-    """ WRITE DOCUMENTATION
-    """
-    # xlabel, ylabel, zlabel, title = kwargs.get('xlabel',""), kwargs.get('ylabel',""), kwargs.get('zlabel',""), kwargs.get('title',"")
-    # fig = plt.figure()
-    # fig.patch.set_facecolor('white')
-    # ax = fig.add_subplot(111, projection='3d')
-    # ax.plot_surface(X,Y,Z)
-    # ax = Axes3D(fig)
-    # ax.add_collection3d(Poly3DCollection([zip(x, y, z)], zorder=1))
-    plt.plot(x,y)
-    # ax.set_xlabel(xlabel)
-    # ax.set_ylabel(ylabel)
-    # ax.set_zlabel(zlabel)
-    # ax.set_title(title)
-    plt.show()
-    # plt.close()
-
 def visualize_city(fn, scale = 1):
     p = pv.Plotter()
     with open(fn,'r') as f:
@@ -105,7 +87,7 @@ def visualize_city(fn, scale = 1):
 
                     vertex_list.append(val)
 
-            cloud = pv.PolyData(np.array(vertex_list))
+            cloud = pv.PolyData(np.array(vertex_list)/scale)
             volume = cloud.delaunay_3d(alpha=10000000)
             shell = volume.extract_geometry()
             p.add_mesh(shell, opacity=1, color="#d9d9d9")
@@ -148,10 +130,12 @@ def visualize_city(fn, scale = 1):
 
                     vertex_list.append(val)
 
-            cloud = pv.PolyData(np.array(vertex_list))
-            volume = cloud.delaunay_3d(alpha=10000000)
+            cloud = pv.PolyData(np.array(vertex_list)/scale)
+            volume = cloud.delaunay_3d()
             shell = volume.extract_geometry()
+            edges = shell.extract_feature_edges(20)
             p.add_mesh(shell, opacity=1, color="#d9d9d9")
+            p.add_mesh(edges, color="k", line_width=1)
             # object_poly = pc.qhull(np.array(vertex_list)/scale)
             # # object_poly.b = object_poly.b/scale
             # plot_polytope_3d(object_poly, ax = ax1)

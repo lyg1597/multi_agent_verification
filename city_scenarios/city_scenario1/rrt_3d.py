@@ -252,13 +252,20 @@ class RRT3D:
 
     def get_random_node(self):
         while True:
-            if random.uniform(0,1) > 0.2:
+            if random.uniform(0,1) > 0.4:
                 x = random.uniform(self.min_rand_x, self.max_rand_x)
                 y = random.uniform(self.min_rand_y, self.max_rand_y)
                 z = random.uniform(self.min_rand_z, self.max_rand_z)
                 in_reached,_ = self.in_reached_goal(x,y,z,self.goal_list)
                 if not in_reached:
                     break
+            elif random.uniform(0,1) > 0.2:
+                x = random.uniform(self.min_rand_x, self.max_rand_x)
+                y = random.uniform(self.min_rand_y, self.max_rand_y)
+                z = random.uniform(20, self.max_rand_z)
+                in_reached,_ = self.in_reached_goal(x,y,z,self.goal_list)
+                if not in_reached:
+                    break            
             else:
                 x = self.end[0].x
                 y = self.end[0].y

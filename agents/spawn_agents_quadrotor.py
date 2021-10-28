@@ -36,6 +36,8 @@ class AgentData:
         self.tube_plan = {}
         self.tube = {}
         self.tube_cached = {}
+        self.tube_time = {}
+        self.segment_results = {}
 
         self.plotted_points = {}
         self.plotted_plan = {}
@@ -97,15 +99,21 @@ class AgentData:
         tube = np.array(msg.tube.data).reshape(shape).tolist() 
         plan = msg.plan 
         from_cache = msg.from_cache
+        tube_time = msg.reachtube_start_time 
+        segment_res = msg.res 
+        print(f"reachtube time {tube_time}")
         if idx in self.tube_plan:
             self.tube_plan[idx].append(plan)
             self.tube[idx].append(tube)
             self.tube_cached[idx].append(from_cache)
+            self.tube_time[idx].append(tube_time)
+            self.segment_results[idx].append(segment_res)
         else:
             self.tube_plan[idx] = [plan]
             self.tube[idx] = [tube]
             self.tube_cached[idx] = [from_cache]
-            
+            self.tube_time[idx] = [tube_time]
+            self.segment_results[idx] = [segment_res]
         # print(tube)
         pass
 
@@ -250,7 +258,7 @@ class AgentData:
                 with open('agent_state','wb+') as f:
                     pickle.dump(self.agent_state_dict,f)
                 with open('agent_tube','wb+') as f:
-                    pickle.dump((self.tube, self.tube_cached, self.tube_plan),f)
+                    pickle.dump((self.tube, self.tube_cached, self.tube_plan, self.tube_time, self.segment_results),f)
                 return 
 
             if rospy.is_shutdown():
@@ -298,7 +306,7 @@ if __name__ == "__main__":
             wp = get_waypoints(init_mode_id, edge_list, mode_list)
             wp_list.append(wp)
     else: 
-        num_agents = 5
+        num_agents = 1
         
         # raw_wp_list = [
         #     [20.0, 5.0, 20.0, 10.0],
@@ -344,7 +352,7 @@ if __name__ == "__main__":
                 raw_wp = copy.deepcopy(raw_wp_list[j])
                 raw_wp[0] += i*12
                 raw_wp[3] += i*12
-                wp1.append(Waypoint('follow_waypoint',raw_wp,3.0,0))
+                wp1.append(Waypoint('follow_waypoint',raw_wp,5.0,0))
             for j in range(len(raw_unsafeset_list)):
                 raw_unsafeset = copy.deepcopy(raw_unsafeset_list[j][1])
                 raw_unsafeset[0][0] += i*12
