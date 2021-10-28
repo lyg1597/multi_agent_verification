@@ -2,7 +2,7 @@ import numpy as np
 import json 
 
 # fn = './data/res_car3_nocache.json'
-fn = './res.json'
+fn = './data/comp3d-20-v2/res.json'
 with open(fn, 'r') as f:
     res = json.load(f)
 

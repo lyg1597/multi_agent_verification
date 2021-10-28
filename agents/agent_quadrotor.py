@@ -398,7 +398,7 @@ class AgentQuadrotor:
             trace.append([t])
             trace[i].extend(val[3:])  # remove the reference trajectory from the trace
 
-            time.sleep(time_step*5)
+            time.sleep(time_step*0)
 
             curr_state = StateVisualizeMsg()
             curr_state.state = [val[0], val[1]]
@@ -451,7 +451,7 @@ class AgentQuadrotor:
             idx = idx, 
             dynamics = dynamics,
             variables_list = variables_list,
-            initset_resolution = [0.5,0.5,0.5,0.01,0.01,0.01]
+            initset_resolution = [0.5,0.5,0.5,0.001,0.001,0.001]
         )
         # self.safety_checking_lock.release()
         reachtube_time = res.rt_time 
