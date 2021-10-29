@@ -323,14 +323,14 @@ class ReachTubeUnion():
         # initset_union_poly = pc.box2poly(initset_union_box.T)
         # if pc.is_subset(initset_virtual_poly, self.initset_union, abs_tol = 1e-10):
         if pc.is_subset(initset_virtual_poly, self.initset_union):
-            print(initset_virtual, pc.bounding_box(self.initset_union), True)
+            # print(initset_virtual, pc.bounding_box(self.initset_union), True)
             return True
         # initset_union_box = np.column_stack(pc.bounding_box(self.initset_union)).T
         # if PolyUtils.does_rect_contain(initset_virtual, initset_union_box):
         #     print(initset_virtual, initset_union_box, True)
         #     return True
         # print(initset_virtual, initset_union_box, False)
-        print(initset_virtual, pc.bounding_box(self.initset_union), False)
+        # print(initset_virtual, pc.bounding_box(self.initset_union), False)
         return False  
 
     def add(self, initset_virtual, plan_virtual, tube_virtual):
@@ -580,8 +580,8 @@ class TubeCache:
     def in_cache2(self, initset_virtual, plan_virtual, agent_dynamics):
         # return False
         key = (tuple(plan_virtual), agent_dynamics)
-        print(key)
-        print(self.cache_dict)
+        # print(key)
+        # print(self.cache_dict)
         if key not in self.cache_dict:
             return False, None 
 
@@ -653,12 +653,12 @@ class TubeCache:
         if not res:
             if union2 is not None:
                 self.cache_dict[key].append(union2)
-            print(f"refine failed {len(self.cache_dict[key])}, {closest_center_idx}")
+            # print(f"refine failed {len(self.cache_dict[key])}, {closest_center_idx}")
             return res
             
         self.cache_dict[key][closest_center_idx] = union1 
         self.cache_dict[key].append(union2)
-        print(f"done refinement {len(self.cache_dict[key])}, {closest_center_idx}")
+        # print(f"done refinement {len(self.cache_dict[key])}, {closest_center_idx}")
         return res
 
     def print_cache_info(self, key):
@@ -811,7 +811,7 @@ class MultiAgentVerifier:
 
     def verification_server2(self, params: VerifierSrv):        
         self.cache_lock.acquire(blocking=True)
-        print(params.idx, f"verification start for plan {params.plan}")
+        # print(params.idx, f"verification start for plan {params.plan}")
         verification_start = time.time()
         verification_time = 0
         refine_time = 0
@@ -823,12 +823,12 @@ class MultiAgentVerifier:
             res, key, initset_virtual = self.verify_cache2(params, compute)
             compute = False 
             verification_time += (time.time() - verification_start)
-            if res.res == 1 or res.res == -1:
+            if res.res == 1 or res.res == -1 or res.res == -2:
                 res.tt_time = time.time() - verification_start
                 res.num_ref = i
                 res.refine_time = refine_time
                 res.verification_time = verification_time
-                print(params.idx, f"verification finished for plan {params.plan}, time {verification_time}, cache {res.from_cache}")
+                # print(params.idx, f"verification finished for plan {params.plan}, time {verification_time}, cache {res.from_cache}")
                 self.cache_lock.release()
                 return res
             refine_start = time.time()
@@ -840,7 +840,7 @@ class MultiAgentVerifier:
         res.tt_time = time.time() - verification_start
         res.refine_time = refine_time
         res.verification_time = verification_time
-        print(params.idx, f"verification finished for plan {params.plan}, time {verification_time}, cache {res.from_cache}")
+        # print(params.idx, f"verification finished for plan {params.plan}, time {verification_time}, cache {res.from_cache}")
         self.cache_lock.release()
         return res
 
@@ -873,6 +873,10 @@ class MultiAgentVerifier:
             tube = self.cache.transform_tube_from_virtual(tube_virtual, transform_information, dynamics_funcs)
         else:
             init_set = self.bloat_initset(init_set, resolution = initset_resolution)
+            print("############")
+            print(f'agent idx {idx}')
+            print(f"initial condition compute: {init_set}")
+            print(f"plan: {plan}")
             tube, trace = self.cache.compute_tube(init_set, plan, idx, variables_list, time_horizon, agent_dynamics)
             tube_virtual = self.cache.transform_tube_to_virtual(tube, transform_information, dynamics_funcs)
             # tube_virtual, trace = self.cache.compute_tube(initset_virtual, plan_virtual, idx, variables_list, time_horizon, agent_dynamics)
@@ -888,26 +892,26 @@ class MultiAgentVerifier:
         # tube = self.cache.transform_tube_from_virtual(tube_virtual, transform_information, dynamics_funcs)
         self.publish_reachtube(idx, tube, plan, int(from_cache), res = -1)
         safety_checking_start = time.time()
-        print(f"start checking static safety for agent {idx}")
+        # print(f"start checking static safety for agent {idx}")
         res = self.check_static_safety(tube)
         if not res:
-            print(f"static unsafe {idx}")
+            # print(f"static unsafe {idx}")
             safety_checking_time = time.time() - safety_checking_start
             if from_cache:
                 return VerifierSrvResponse(res = 0, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, from_cache = int(from_cache), num_ref = 0), (tuple(plan_virtual), agent_dynamics), initset_virtual
             else:
                 self.publish_reachtube(idx, tube, plan, int(from_cache), res = -1)
-                return VerifierSrvResponse(res = -1, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, from_cache = int(from_cache), num_ref = 0), (tuple(plan_virtual), agent_dynamics), initset_virtual
+                return VerifierSrvResponse(res = -2, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, from_cache = int(from_cache), num_ref = 0), (tuple(plan_virtual), agent_dynamics), initset_virtual
  
         self.curr_segments[idx] = (plan, tube)
-        print(f"start checking dynamic safety for agent {idx}")
+        # print(f"start checking dynamic safety for agent {idx}")
         res, key = self.check_dynamic_safety(idx, plan, tube)
         safety_checking_time = time.time() - safety_checking_start
         # print(idx, f"verification finished for plan {plan}")
         tt_time = time.time() - total_time
 
         if not res:
-            print(f"dynamic unsafe {idx}, {key}")
+            # print(f"dynamic unsafe {idx}, {key}")
             self.curr_segments[idx] = (plan, [])
             self.publish_reachtube(idx, tube, plan, int(from_cache), res = -1)
             if from_cache:
@@ -920,7 +924,6 @@ class MultiAgentVerifier:
 
     def verification_server(self, params: VerifierSrv):        
         self.cache_lock.acquire(blocking=True)
-        print(params.idx, f"verification start for plan {params.plan}")
         verification_start = time.time()
         verification_time = 0
         refine_time = 0
@@ -937,7 +940,6 @@ class MultiAgentVerifier:
                 res.num_ref = i
                 res.refine_time = refine_time
                 res.verification_time = verification_time
-                print(params.idx, f"verification finished for plan {params.plan}, time {verification_time}, cache {res.from_cache}")
                 self.cache_lock.release()
                 return res
             refine_start = time.time()
@@ -949,7 +951,6 @@ class MultiAgentVerifier:
         res.tt_time = time.time() - verification_start
         res.refine_time = refine_time
         res.verification_time = verification_time
-        print(params.idx, f"verification finished for plan {params.plan}, time {verification_time}, cache {res.from_cache}")
         self.cache_lock.release()
         return res
 
@@ -996,10 +997,8 @@ class MultiAgentVerifier:
         # tube = self.cache.transform_tube_from_virtual(tube_virtual, transform_information, dynamics_funcs)
         self.publish_reachtube(idx, tube, plan, int(from_cache))
         safety_checking_start = time.time()
-        print(f"start checking static safety for agent {idx}")
         res = self.check_static_safety(tube)
         if not res:
-            print(f"static unsafe {idx}")
             safety_checking_time = time.time() - safety_checking_start
             if from_cache:
                 return VerifierSrvResponse(res = 0, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, from_cache = int(from_cache), num_ref = 0), (tuple(plan_virtual), agent_dynamics), initset_virtual
@@ -1007,14 +1006,12 @@ class MultiAgentVerifier:
                 return VerifierSrvResponse(res = -1, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, from_cache = int(from_cache), num_ref = 0), (tuple(plan_virtual), agent_dynamics), initset_virtual
  
         self.curr_segments[idx] = (plan, tube)
-        print(f"start checking dynamic safety for agent {idx}")
         res, key = self.check_dynamic_safety(idx, plan, tube)
         safety_checking_time = time.time() - safety_checking_start
         # print(idx, f"verification finished for plan {plan}")
         tt_time = time.time() - total_time
 
         if not res:
-            print(f"dynamic unsafe {idx}, {key}")
             self.curr_segments[idx] = (plan, [])
             if from_cache:
                 return VerifierSrvResponse(res = 0, idx = idx, rt_time = compute_reachtube_time, sc_time = safety_checking_time, tt_time = tt_time, from_cache = int(from_cache), num_ref = 0), (tuple(plan_virtual), agent_dynamics), initset_virtual
@@ -1129,7 +1126,7 @@ class MultiAgentVerifier:
         msg.tube.data = tmp.flatten().tolist()
         msg.plan = plan
         msg.res = res
-        print(f"reachtube publish time {time.time()}")
+        # print(f"reachtube publish time {time.time()}")
         msg.reachtube_start_time = time.time()
 
         self.reachtube_publisher.publish(msg)
@@ -1182,3 +1179,13 @@ if __name__ == "__main__":
     #     x = end[1]
     #     y = end[2]
     #     theta = end[3]
+   
+    # init_set = [[86.06786346435547, 95.67272186279297, 13.225000381469727, 0.7372123599052429, -0.7392123341560364, -0.10100000351667404], [87.06786346435547, 96.67272186279297, 14.225000381469727, 0.7392123341560364, -0.7372123599052429, -0.0989999994635582]]
+    # plan = (86.55999755859375, 90.58999633789062, 13.5, 88.68000030517578, 92.70999908447266, 13.5)
+    # idx = 0
+    # variables_list = ['x','y','z','vx','vy','vz'] 
+    # time_horizon = 3
+    # agent_dynamics = 'dryvr_dynamics/NNquadrotor_new_code_TR'
+    # tube, trace = verifier.cache.compute_tube(init_set, plan, idx, variables_list, time_horizon, agent_dynamics)
+    # print(tube[0], tube[-1]) 
+    # print(trace[0][0], trace[0][-1])

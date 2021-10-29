@@ -248,10 +248,10 @@ class AgentData:
             if np.all(self.done_list): 
                 print("all agents finished")
                 print(self.results)
-                plt.savefig('./res_fig.png')
+                # plt.savefig('./res_fig.png')
                 plt.close()
                 f = open('res.json', 'w+')
-                self.generate_figure("./res_fig.png")
+                # self.generate_figure("./res_fig.png")
                 json.dump(self.results, f)
                 with open('agent_plan','wb+') as f:
                     pickle.dump(self.agent_plan_dict,f)
@@ -306,7 +306,7 @@ if __name__ == "__main__":
             wp = get_waypoints(init_mode_id, edge_list, mode_list)
             wp_list.append(wp)
     else: 
-        num_agents = 5
+        num_agents = 50
         
         # raw_wp_list = [
         #     [20.0, 5.0, 20.0, 10.0],
@@ -331,7 +331,7 @@ if __name__ == "__main__":
         ]
         raw_unsafeset_list = [
             ["Box", [[23,5,-100,-100,-100,-100],[27,12,100,100,100,100]]],
-            ["Box", [[35.8,18,-100,-100,-100,-100],[43,20,100,100,100,100]]],
+            ["Box", [[36.5,18,-100,-100,-100,-100],[43,20,100,100,100,100]]],
         ]
 
         # raw_wp_list = [
@@ -395,6 +395,8 @@ if __name__ == "__main__":
     visualize_process = threading.Thread(target = agent_data.visualize_agent_data)
     visualize_process.start()
 
+    scenario_start_time = time.time()
+
     safety_checking_lock = threading.Lock()
     agent_process_list = []
     for i in range(num_agents):
@@ -426,8 +428,11 @@ if __name__ == "__main__":
         p = threading.Thread(target = agent.execute_plan)
         p.start()
         agent_process_list.append(p)
+        time.sleep(1)
     
     for p in agent_process_list:
         p.join()
 
     visualize_process.join()
+    scenario_duration = time.time() - scenario_start_time
+    print(f'scenario duration {scenario_duration}')

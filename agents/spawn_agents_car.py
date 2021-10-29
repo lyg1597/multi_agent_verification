@@ -281,7 +281,7 @@ if __name__ == "__main__":
             wp = get_waypoints(init_mode_id, edge_list, mode_list)
             wp_list.append(wp)
     else: 
-        num_agents = 5
+        num_agents = 100
         
         raw_wp_list = [
             [20.0, 5.0, 20.0, 10.0],
@@ -293,7 +293,7 @@ if __name__ == "__main__":
         ]
         raw_unsafeset_list = [
             ["Box", [[23,5,-100],[27,12,100]]],
-            ["Box", [[35.8,18,-100],[43,20,100]]],
+            ["Box", [[36.5,18,-100],[43,20,100]]],
         ]
 
         # raw_wp_list = [
@@ -352,6 +352,8 @@ if __name__ == "__main__":
     visualize_process = threading.Thread(target = agent_data.visualize_agent_data)
     visualize_process.start()
 
+    scenario_start_time = time.time()
+
     safety_checking_lock = threading.Lock()
     agent_process_list = []
     for i in range(num_agents):
@@ -389,3 +391,6 @@ if __name__ == "__main__":
         p.join()
 
     visualize_process.join()
+
+    scenario_duration = time.time() - scenario_start_time
+    print(f'scenario duration {scenario_duration}')

@@ -2,7 +2,7 @@ import numpy as np
 import json 
 
 # fn = './data/res_car3_nocache.json'
-fn = './data/comp3d-20-v2/res.json'
+fn = './res.json'
 with open(fn, 'r') as f:
     res = json.load(f)
 
@@ -33,6 +33,9 @@ segments_sum = np.sum(total_length)
 print(f"total number of segments {segments_sum}")
 cache_hit = np.sum(total_hit)
 print(f"total number of cache hit {cache_hit}")
+Rc = segments_sum - cache_hit 
+print(f"Rc {Rc}")
+
 avg_verification_time = np.mean(verification_time)
 print(f"average verification time {avg_verification_time}")
 avg_verification_time_later = np.mean(verification_time_later)
@@ -47,3 +50,5 @@ print(f"max verification time after first 5 steps {max_verification_time_later}"
 avg_segment_time = np.mean(segment_time)
 print(f"average segment time {avg_segment_time}")
 print(f"{safe} agents safe, within {num_agent} agents")
+max_segment_time = np.amax(segment_time)
+print(f"max segment time {max_segment_time}")

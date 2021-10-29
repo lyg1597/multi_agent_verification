@@ -64,39 +64,39 @@ def run_simulation(init, parameters, time_bound, time_step):
         v = 1 * np.cos(thetae) + k1 * xe_rotated
         omega = 0 + 1 * (k2 * ye_rotated + k3 * np.sin(thetae))
 
-        # r = ode(dynamics)
-        # r.set_initial_value(state)
+        r = ode(dynamics)
+        r.set_initial_value(state)
 
-        # r.set_f_params([vxref, vyref, v, omega])
+        r.set_f_params([vxref, vyref, v, omega])
 
-        # val = r.integrate(r.t + time_step)
+        val = r.integrate(r.t + time_step)
 
-        mode_parameters = [vxref, vyref, v, omega]
-        v = mode_parameters[2]
-        omega = mode_parameters[3]
+        # mode_parameters = [vxref, vyref, v, omega]
+        # v = mode_parameters[2]
+        # omega = mode_parameters[3]
 
-        theta = state[3]
+        # theta = state[3]
 
-        dx = v*np.cos(theta)
-        dy = v*np.sin(theta)
-        dz = 0
-        dtheta = omega
+        # dx = v*np.cos(theta)
+        # dy = v*np.sin(theta)
+        # dz = 0
+        # dtheta = omega
 
-        dxref = mode_parameters[0]
-        dyref = mode_parameters[1]
-        dthetaref = 0
+        # dxref = mode_parameters[0]
+        # dyref = mode_parameters[1]
+        # dthetaref = 0
 
-        # return [dx,dy,dz,dtheta,dxref,dyref,dthetaref]
+        # # return [dx,dy,dz,dtheta,dxref,dyref,dthetaref]
 
-        val = [
-            state[0] + dx*time_step,
-            state[1] + dy*time_step,
-            state[2] + dz*time_step,
-            state[3] + dtheta*time_step,
-            state[4] + dxref*time_step,
-            state[5] + dyref*time_step,
-            state[6] + dthetaref*time_step,
-        ]
+        # val = [
+        #     state[0] + dx*time_step,
+        #     state[1] + dy*time_step,
+        #     state[2] + dz*time_step,
+        #     state[3] + dtheta*time_step,
+        #     state[4] + dxref*time_step,
+        #     state[5] + dyref*time_step,
+        #     state[6] + dthetaref*time_step,
+        # ]
 
         trajectory.append(val)
         t += time_step

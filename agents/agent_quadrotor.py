@@ -33,7 +33,7 @@ class FFNNC(torch.nn.Module):
         return x
 
 class AgentQuadrotor:
-    def __init__(self, idx: int, waypoints: List[Waypoint], init_state: List[float]):
+    def __init__(self, idx: int, waypoints: List[Waypoint], init_state: List[float], factor = 5):
         self.idx = idx
         self.waypoint_list: List[Waypoint] = waypoints
         self.init_state: List[float] = init_state
@@ -53,7 +53,9 @@ class AgentQuadrotor:
         self.refine_time = []
         self.server_verify_time = []
 
-        self.retry_threshold = 10
+        self.retry_threshold = 20
+
+        self.factor = factor
 
     def func1(self, t, vars, u):
         u1 = u[0]
@@ -398,7 +400,7 @@ class AgentQuadrotor:
             trace.append([t])
             trace[i].extend(val[3:])  # remove the reference trajectory from the trace
 
-            time.sleep(time_step*0)
+            time.sleep(time_step*self.factor)
 
             curr_state = StateVisualizeMsg()
             curr_state.state = [val[0], val[1]]
@@ -451,7 +453,7 @@ class AgentQuadrotor:
             idx = idx, 
             dynamics = dynamics,
             variables_list = variables_list,
-            initset_resolution = [0.5,0.5,0.5,0.001,0.001,0.001]
+            initset_resolution = [0,0,0,0,0,0]
         )
         # self.safety_checking_lock.release()
         reachtube_time = res.rt_time 
@@ -468,8 +470,11 @@ class AgentQuadrotor:
         self.num_tube_computed += 1
         if res.res == 1:
             return 'Safe'
-        else:
+        elif res.res == -2:
             return 'Unsafe'
+        else:
+            return 'Tmp'
+        # return res.res
 
     def execute_plan(self):
         print(f'Running agent {self.idx}')
@@ -482,6 +487,16 @@ class AgentQuadrotor:
         while i < len(self.waypoint_list):
             start_time = time.time()
             current_plan = self.waypoint_list[i]
+            mode_parameters = current_plan.mode_parameters
+            
+            if np.linalg.norm(np.array(curr_init_set)[:3] - np.array(mode_parameters)[:3])>2:
+                curr_init_set[0] = mode_parameters[0]
+                curr_init_set[1] = mode_parameters[1]
+                curr_init_set[2] = mode_parameters[2]
+                curr_init_set[3] = 0
+                curr_init_set[4] = 0
+                curr_init_set[5] = 0
+
             print(f'Start verifying plan for agent {self.idx}')
             verifier_start = time.time()
             res = self.verifier(
@@ -495,7 +510,7 @@ class AgentQuadrotor:
             self.verification_time.append(time.time() - verifier_start)
             print(f'Done verifying plan for agent {self.idx}, {time.time() - verifier_start}')
 
-            if res != 'Safe':
+            if res == 'Tmp':
                 print(f"agent{self.idx} plan unsafe, wait and retry")
                 if j > self.retry_threshold:
                     print(f"agent{self.idx} plan unsafe")

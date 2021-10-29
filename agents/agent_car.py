@@ -20,7 +20,7 @@ from std_msgs.msg import Int64
 from verification_msg.srv import VerifierSrv, VerifierSrvResponse
 
 class AgentCar:
-    def __init__(self, idx: int, waypoints: List[Waypoint], init_state: List[float]):
+    def __init__(self, idx: int, waypoints: List[Waypoint], init_state: List[float], factor = 5):
         self.idx = idx
         self.waypoint_list: List[Waypoint] = waypoints
         self.init_state: List[float] = init_state
@@ -40,6 +40,7 @@ class AgentCar:
         self.refine_time = []
         self.server_verify_time = []
         self.retry_threshold = 10
+        self.factor = factor
 
     def dynamics(self, t, state, mode_parameters):
         v = mode_parameters[2]
@@ -91,18 +92,44 @@ class AgentCar:
             v = 1 * np.cos(thetae) + k1 * xe_rotated
             omega = 0 + 1 * (k2 * ye_rotated + k3 * np.sin(thetae))
 
-            r = ode(self.dynamics)
-            r.set_initial_value(state)
+            # r = ode(self.dynamics)
+            # r.set_initial_value(state)
 
-            r.set_f_params([vxref, vyref, v, omega])
+            # r.set_f_params([vxref, vyref, v, omega])
 
-            val = r.integrate(r.t + time_step)
+            # val = r.integrate(r.t + time_step)
+
+            mode_parameters = [vxref, vyref, v, omega]
+            v = mode_parameters[2]
+            omega = mode_parameters[3]
+
+            theta = state[2]
+
+            dx = v*np.cos(theta)
+            dy = v*np.sin(theta)
+            dtheta = omega
+
+            dxref = mode_parameters[0]
+            dyref = mode_parameters[1]
+            dthetaref = 0
+
+            # return [dx,dy,dz,dtheta,dxref,dyref,dthetaref]
+
+            val = [
+                state[0] + dx*time_step,
+                state[1] + dy*time_step,
+                state[2] + dtheta*time_step,
+                state[3] + dxref*time_step,
+                state[4] + dyref*time_step,
+                state[5] + dthetaref*time_step,
+            ]
+
             trajectory.append(val)
             t += time_step
             i += 1
             trace.append([t])
             trace[i].extend(val[0:3])
-            time.sleep(time_step*5)
+            time.sleep(time_step*self.factor)
 
             curr_state = StateVisualizeMsg()
             curr_state.state = [val[0], val[1]]
