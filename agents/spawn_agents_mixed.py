@@ -397,7 +397,6 @@ if __name__ == "__main__":
 
     scenario_start_time = time.time()
 
-
     safety_checking_lock = threading.Lock()
     agent_process_list = []
     for i in range(num_agents):

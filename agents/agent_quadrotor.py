@@ -443,7 +443,7 @@ class AgentQuadrotor:
         dynamics = "dryvr_dynamics/NNquadrotor_new_code_TR"
         time_horizon = plan.time_bound
         variables_list = ['x', 'y', 'z', 'vx', 'vy', 'vz']
-        print(init_set)
+        # print(init_set)
         # self.safety_checking_lock.acquire(blocking=True)
         res = verify(
             initset_lower = init_set[0], 

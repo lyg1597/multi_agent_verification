@@ -273,6 +273,8 @@ if __name__ == "__main__":
         #     unsafeset_list.append(unsafe[1])
         unsafeset_list = unsafe_sets
         # Handle waypoints
+        # agent_idx_list = [0,2,4,6,8,10,12,14,16,5,9,15]
+        # agent_idx_list = [0,3,6,9,12,15]
         for i in range(num_agents):
             agent = agent_data['agents'][i]
             init_mode_id = agent['initialModeID']
@@ -281,7 +283,7 @@ if __name__ == "__main__":
             wp = get_waypoints(init_mode_id, edge_list, mode_list)
             wp_list.append(wp)
     else: 
-        num_agents = 100
+        num_agents = 50
         
         raw_wp_list = [
             [20.0, 5.0, 20.0, 10.0],
@@ -369,7 +371,7 @@ if __name__ == "__main__":
         theta_init = theta
         init_state = [x_init, y_init, theta_init]
 
-        agent = AgentCar(i, wp_list[i], init_state)
+        agent = AgentCar(i, wp_list[i], init_state, factor=5)
 
         # x_init = wp_list[i][0].mode_parameters[0]
         # y_init = wp_list[i][0].mode_parameters[1]
