@@ -442,7 +442,7 @@ if __name__ == "__main__":
             p = threading.Thread(target = agent.execute_plan)
             p.start()
             agent_process_list.append(p)
-    
+        # time.sleep(1)
     for p in agent_process_list:
         p.join()
 

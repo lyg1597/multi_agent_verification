@@ -1107,7 +1107,7 @@ class MultiAgentVerifier:
     def start_verifier_server(self):
         rospy.init_node('verifier_server')
         print(os.path.realpath(__file__))
-        verify_service = rospy.Service('verify', VerifierSrv, self.verification_server_nocache)
+        verify_service = rospy.Service('verify', VerifierSrv, self.verification_server2)
         print("Verification Server Started")
         unsafe_service = rospy.Service('set_unsafe', UnsafeSetSrv, self.process_unsafeset)
         rospy.Service('print_tree', CacheInfoSrv,self.print_cache_info)

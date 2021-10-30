@@ -19,7 +19,7 @@ def scene_visualize_3d(fn):
             if unsafe_type == 'Matrix':
                 A = np.array(unsafe[1][0])
                 b = np.array(unsafe[1][1])
-                plot_polytope_3d(A = A[:-6,:3], b = b[:-6,:], ax = ax, color = '#d9d9d9', trans=1, edge=True)
+                plot_polytope_3d(A = A[:-6,:3], b = b[:-6,:], ax = ax, color = '#bdbdbd', trans=1, edge=True)
         A_rect = np.array([[-1,0,0],
                         [1,0,0],
                         [0,-1,0],
@@ -27,7 +27,7 @@ def scene_visualize_3d(fn):
                         [0,0,-1],
                         [0,0,1]])
         b = np.array([[50], [300], [50], [300], [2], [0]])
-        plot_polytope_3d(A = A_rect, b = b, ax = ax, color = '#d9d9d9', trans=1, edge=True)
+        plot_polytope_3d(A = A_rect, b = b, ax = ax, color = '#ffffff', trans=1, edge=True)
         
         # agent = [9,11]
         # agent = [10, 12]

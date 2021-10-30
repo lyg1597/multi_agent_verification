@@ -232,7 +232,7 @@ class AgentData:
                 plt.savefig('./res_fig.png')
                 plt.close()
                 f = open('res.json', 'w+')
-                self.generate_figure("./res_fig.png")
+                # self.generate_figure("./res_fig.png")
                 json.dump(self.results, f)
                 return 
 
@@ -267,15 +267,16 @@ if __name__ == "__main__":
         f = open(fn, 'r')
         agent_data = json.load(f)
         num_agents = len(agent_data['agents'])
+        num_agents = 12
         # Handle unsafe sets
         unsafe_sets = agent_data['unsafeSet']
         # for unsafe in unsafe_sets:
         #     unsafeset_list.append(unsafe[1])
         unsafeset_list = unsafe_sets
         # Handle waypoints
-        # agent_idx_list = [0,2,4,6,8,10,12,14,16,5,9,15]
+        agent_idx_list = [0,2,4,6,8,10,12,14,16,5,9,15]
         # agent_idx_list = [0,3,6,9,12,15]
-        for i in range(num_agents):
+        for i in agent_idx_list:
             agent = agent_data['agents'][i]
             init_mode_id = agent['initialModeID']
             edge_list = agent['edge_list']
