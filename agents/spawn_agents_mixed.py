@@ -251,18 +251,18 @@ class AgentData:
             if np.all(self.done_list): 
                 print("all agents finished")
                 print(self.results)
-                plt.savefig('./res_fig.png')
+                plt.savefig('./data/res_fig.png')
                 plt.close()
                 self.print_avg()
-                f = open('res.json', 'w+')
-                # self.generate_figure("./res_fig.png")
+                f = open('./data/res.json', 'w+')
                 json.dump(self.results, f)
-                with open('agent_plan','wb+') as f:
+                with open('./data/agent_plan','wb+') as f:
                     pickle.dump(self.agent_plan_dict,f)
-                with open('agent_state','wb+') as f:
+                with open('./data/agent_state','wb+') as f:
                     pickle.dump(self.agent_state_dict,f)
-                with open('agent_tube','wb+') as f:
+                with open('./data/agent_tube','wb+') as f:
                     pickle.dump((self.tube, self.tube_cached, self.tube_plan, self.tube_time, self.segment_results),f)
+                # self.generate_figure("./data/res_fig.png")
                 return 
 
             if rospy.is_shutdown():

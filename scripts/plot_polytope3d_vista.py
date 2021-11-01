@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d as a3
 
 from scipy.spatial import ConvexHull
-import pypoman as ppm
 import polytope as pc
 import pyvista as pv
 

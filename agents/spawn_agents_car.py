@@ -1,11 +1,9 @@
-from multiprocessing import Process
 import threading
 import numpy as np
 import matplotlib.pyplot as plt 
 import matplotlib.patches as patches
 import time
 import copy
-import sys
 import json
 import pypoman as ppm 
 
@@ -232,12 +230,12 @@ class AgentData:
             if np.all(self.done_list): 
                 print("all agents finished")
                 print(self.results)
-                plt.savefig('./res_fig.png')
+                plt.savefig('./data/res_fig.png')
                 plt.close()
-                f = open('res.json', 'w+')
-                # self.generate_figure("./res_fig.png")
+                f = open('./data/res.json', 'w+')
                 self.print_avg()
                 json.dump(self.results, f)
+                # self.generate_figure("./data/res_fig.png")
                 return 
 
             if rospy.is_shutdown():
@@ -298,7 +296,7 @@ class AgentData:
         # print(f"max verification time after first 5 steps {max_verification_time_later}")
         avg_segment_time = np.mean(segment_time)
         print(f"ASt: {avg_segment_time}")
-        print(f"{safe} agents safe, within {num_agent} agents")
+        # print(f"{safe} agents safe, within {num_agent} agents")
         max_segment_time = np.amax(segment_time)
         # print(f"max segment time {max_segment_time}")
 

@@ -27,14 +27,16 @@ However, the vary in results will not influence the observations that we made in
 ###########################
 
 Dependencies: All dependencies for the repeatability package are already installed in the Virtual Machine
-Python 3.7 or newer versions
+Ubuntu 20.04
+ROS Noetic
+Python 3.8 or newer versions
 numpy
 scipy
-matplotlib
 polytope
-dill
-ray
+pypoman
 PyTorch
+pyvista
+matplotlib
 
 To replicate our experiments from the paper please run commands on our example files from the root directory of our local repo. The statics will appear in the terminal as the scenario finishes.
 1. To generate Figure 1: 
@@ -54,15 +56,15 @@ To replicate our experiments from the paper please run commands on our example f
             change directory by running the following command:
                 cd ~/Swerve 
             and then set necessary ROS variables:
-                source catkin_workspace/devel/setup.bash
+                source catkin_ws/devel/setup.bash
             and then start the Verification Server with symmetry and caching by using command:
-                rosrun verifier_server verification_server.py
+                rosrun verification_server verification_server.py
 
         In the third terminal,
             change directory by running the following command:
                 cd ~/Swerve 
             and then set necessary ROS variables:
-                source catkin_workspace/devel/setup.bash
+                source catkin_ws/devel/setup.bash
             and then run the scenarios by using following commands: 
                 Map1-2d-50      python3 agents/spawn_agents_car.py -scenario ./scenario_hscc/map1-2d-50.json 
                 Map2-2d-12      python3 agents/spawn_agents_car.py -scenario ./scenario_hscc/map2-2d-12.json
@@ -86,15 +88,15 @@ To replicate our experiments from the paper please run commands on our example f
             change directory by running the following command:
                 cd ~/Swerve 
             and then set necessary ROS variables:
-                source catkin_workspace/devel/setup.bash
+                source catkin_ws/devel/setup.bash
             and then start the Verification Server without symmetry and caching by using command:
-                rosrun verifier_server verification_server.py -no_cache
+                rosrun verification_server verification_server.py -no_cache
 
         In the third terminal,
             change directory by running the following command:
                 cd ~/Swerve 
             and then set necessary ROS variables:
-                source catkin_workspace/devel/setup.bash
+                source catkin_ws/devel/setup.bash
             and then run the scenarios by using following commands: 
                 Map1-2d-50      python3 agents/spawn_agents_car.py -scenario ./scenario_hscc/map1-2d-50.json 
                 Map2-2d-12      python3 agents/spawn_agents_car.py -scenario ./scenario_hscc/map2-2d-12.json
@@ -106,7 +108,7 @@ To replicate our experiments from the paper please run commands on our example f
                 Map4-3d-20(C&Q) python3 agents/spawn_agents_mixed.py -scenario ./scenario_hscc/map4-3d-20.json
             Due to the complexity of the scenarios, Map3-2d-34, Map4-3d-20(Q), Map4-3d-20(C&Q) make take more than an hour to finish. 
 
-2. For the experiment results in Table 1:
+2. For the experiment results in Table 2:
     Start three terminals,
     In the first terminal
         run following command to start roscore: 
@@ -116,15 +118,15 @@ To replicate our experiments from the paper please run commands on our example f
         change directory by running the following command:
             cd ~/Swerve 
         and then set necessary ROS variables:
-            source catkin_workspace/devel/setup.bash
+            source catkin_ws/devel/setup.bash
         and then start the Verification Server with symmetry and caching by using command:
-            rosrun verifier_server verification_server.py
+            rosrun verification_server verification_server.py
 
     In the third terminal,
         change directory by running the following command:
             cd ~/Swerve 
         and then set necessary ROS variables:
-            source catkin_workspace/devel/setup.bash
+            source catkin_ws/devel/setup.bash
         and then run the scenarios by using following commands: 
             Map2-2d-17(15)  python3 agents/spawn_agents_car.py -scenario ./scenario_hscc/map2-2d-17.json
             Map2-2d-12      python3 agents/spawn_agents_car.py -scenario ./scenario_hscc/map2-2d-12.json
@@ -151,7 +153,7 @@ ASt: The average traversal time for each path segment
 
 The computer that we used to do the testing has the following specifications:
 32 GB RAM
-Ubuntu 16.04
+Ubuntu 20.04
 AMD Ryzen 7 5800X CPU @ 3.80GHz
 
 The main file that implements the verification server is catkin_ws/src/verification_server/scripts/verification_server.py.
