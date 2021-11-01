@@ -10,6 +10,8 @@ sudo apt install python3-rosdep -y
 sudo rosdep init
 rosdep update
 
+sudo apt-get install python3-pip 
+
 sudo python3 -m pip install numpy
 sudo python3 -m pip install scipy 
 sudo python3 -m pip install polytope 
