@@ -1,8 +1,8 @@
 This is the repeatability evaluation package for the tool paper "Swerve: Efficient Runtime Verification of Multi-Agent Systems Using Dynamical Symmetries and Cloud Computing" by: Yangge Li, Hussein Sibai, and Sayan Mitra, submitted to HSCC'22.
 
-The link to this artifact VM on figshare is: ???
+The link to this artifact VM on figshare is: https://figshare.com/account/articles/16910812
 
-The link to this artifact VM on Google drive is: ???
+The link to this artifact VM on Google drive is: https://drive.google.com/file/d/1U46p9K_QHY8t4p8hdgajBnnEOYlgyrpQ/view?usp=sharing
 
 The link to the source code git repository for Swerve is: https://github.com/lyg1597/multi_agent_verification/tree/hscc_artifact
 
