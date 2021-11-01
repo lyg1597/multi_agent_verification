@@ -383,7 +383,7 @@ if __name__ == "__main__":
             wp_list.append(wp1)
 
     # Set Unsafe Set
-    set_unsafeset = rospy.ServiceProxy('set_unsafe', UnsafeSetSrv)
+    set_unsafeset = rospy.ServiceProxy('initialize', UnsafeSetSrv)
     obstacle_list = []
     for obstacle in unsafeset_list:
         obstacle_type = obstacle[0]

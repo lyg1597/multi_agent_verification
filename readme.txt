@@ -154,9 +154,9 @@ The computer that we used to do the testing has the following specifications:
 Ubuntu 16.04
 AMD Ryzen 7 5800X CPU @ 3.80GHz
 
-The main file that implements the verification server is catkin_ws/src/verifier_server/scripts/verification_server.py
+The main file that implements the verification server is catkin_ws/src/verification_server/scripts/verification_server.py.
 
-The main file that parse the input, computes the abstraction, implements the verification and refinement algorithms is VerificationScenario.py. The file Agent.py stores the data structures of the abstraction and calls the reachability engine tools (DryVR or Flow*) to compute the reachsets. The examples folder has examples scenario files (.json files) and model files (dynamics + symmetries).
+The agents that requests for verification service are implemented in agents/agent_car.py, agents/agent_car3d.py, and agents/agent_quadrotor. 
 
-The log files of the runs of SceneChecker will be stored in the SceneChecker/log directory.
+The spawners for agents and visualizer of runtime data are implemented in agents/spawn_agent_car.py, agents/spawn_agents_mixed.py, and agents/spawn_agents_quadrotor.py
 

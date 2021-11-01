@@ -768,15 +768,15 @@ class MultiAgentVerifier:
         print('Unsafe set successfuly set')
         return UnsafeSetSrvResponse(res = 1)
 
-    def start_verifier_server(self, no_cache = True):
-        rospy.init_node('verifier_server')
+    def start_verification_server(self, no_cache = True):
+        rospy.init_node('verification_server')
         print(os.path.realpath(__file__))
         if no_cache:
-            verify_service = rospy.Service('verify', VerifierSrv, self.verification_server_nocache)
+            verify_service = rospy.Service('verifyQuery', VerifierSrv, self.verification_server_nocache)
         else:
-            verify_service = rospy.Service('verify', VerifierSrv, self.verification_server2)
+            verify_service = rospy.Service('verifyQuery', VerifierSrv, self.verification_server2)
         print("Verification Server Started")
-        unsafe_service = rospy.Service('set_unsafe', UnsafeSetSrv, self.process_unsafeset)
+        unsafe_service = rospy.Service('initialize', UnsafeSetSrv, self.process_unsafeset)
         rospy.Service('print_tree', CacheInfoSrv,self.print_cache_info)
         rospy.spin()
     
@@ -812,4 +812,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     verifier = MultiAgentVerifier()
-    verifier.start_verifier_server(args.no_cache)
+    verifier.start_verification_server(args.no_cache)

@@ -173,8 +173,8 @@ class AgentCar:
         return np.array(trace)
 
     def verifier(self, idx, plan: Waypoint, init_set):
-        rospy.wait_for_service('verify')
-        verify = rospy.ServiceProxy('verify', VerifierSrv)
+        rospy.wait_for_service('verifyQuery')
+        verify = rospy.ServiceProxy('verifyQuery', VerifierSrv)
         dynamics = "dryvr_dynamics/NN_car_TR_noNN"
         time_horizon = plan.time_bound
         variables_list = ['x', 'y', 'theta']

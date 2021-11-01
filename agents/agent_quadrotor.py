@@ -438,8 +438,8 @@ class AgentQuadrotor:
         return np.array(trace)
 
     def verifier(self, idx, plan: Waypoint, init_set):
-        rospy.wait_for_service('verify')
-        verify = rospy.ServiceProxy('verify', VerifierSrv)
+        rospy.wait_for_service('verifyQuery')
+        verify = rospy.ServiceProxy('verifyQuery', VerifierSrv)
         dynamics = "dryvr_dynamics/NNquadrotor_new_code_TR"
         time_horizon = plan.time_bound
         variables_list = ['x', 'y', 'z', 'vx', 'vy', 'vz']

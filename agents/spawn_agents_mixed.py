@@ -436,7 +436,7 @@ if __name__ == "__main__":
 
     # tmp = unsafeset_list
     # unsafeset_list = []
-    set_unsafeset = rospy.ServiceProxy('set_unsafe', UnsafeSetSrv)
+    set_unsafeset = rospy.ServiceProxy('initialize', UnsafeSetSrv)
     obstacle_list = []
     for obstacle in unsafeset_list:
         obstacle_type = obstacle[0]
