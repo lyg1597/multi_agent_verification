@@ -4,9 +4,9 @@ The link to this artifact VM on figshare is: ???
 
 The link to this artifact VM on Google drive is: ???
 
-The link to the source code git repository for Swerve is: ???
+The link to the source code git repository for Swerve is: https://github.com/lyg1597/multi_agent_verification/tree/hscc_artifact
 
-Swerve with its source codes is provided with this VM. There is no tool or library that should be downloaded before usage, and all tools can be used in this VM without an internet connection.
+Swerve with its source codes is provided with this VM. There is no tool or library that should be downloaded before usage, and all tools can be used in this VM without an internet connection. The root password of the VM is HSCC2022.
 
 ###########################
 
