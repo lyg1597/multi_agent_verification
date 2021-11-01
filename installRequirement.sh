@@ -10,13 +10,12 @@ sudo apt install python3-rosdep -y
 sudo rosdep init
 rosdep update
 
-sudo apt-get install python3-pip 
+sudo apt-get install python3-pip libgmp3-dev
 
 sudo python3 -m pip install numpy
 sudo python3 -m pip install scipy 
 sudo python3 -m pip install polytope 
 sudo python3 -m pip install pypoman  
-sudo python3 -m pip install 
 sudo python3 -m pip install torch==1.10.0+cpu torchvision==0.11.1+cpu torchaudio==0.10.0+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
 sudo python3 -m pip install pyvista 
 sudo python3 -m pip install matplotlib
