@@ -18,9 +18,10 @@ from agent_car import AgentCar
 from agent_quadrotor import AgentQuadrotor
 from common.Waypoint import Waypoint
 
+import argparse
 
 class AgentData:
-    def __init__(self, num_agent, unsafeset_list):
+    def __init__(self, num_agent, unsafeset_list, wp_list):
         self.num_agent = num_agent
         self.agent_state_dict = {}
         for i in range(num_agent):
@@ -30,6 +31,8 @@ class AgentData:
             self.agent_plan_dict[i] = [[],[]]
         self.state_subscribers = self.create_subscriber()
         self.reachtube_subscriber = rospy.Subscriber('/verifier/reachtube', ReachtubeMsg,self.reachtube_handler, queue_size = 10)
+
+        self.wp_list = wp_list 
 
         self.tube_plan = {}
         self.tube = {}
@@ -233,6 +236,7 @@ class AgentData:
                 plt.close()
                 f = open('res.json', 'w+')
                 # self.generate_figure("./res_fig.png")
+                self.print_avg()
                 json.dump(self.results, f)
                 return 
 
@@ -240,6 +244,63 @@ class AgentData:
                 print(60)
                 plt.close()
                 return
+
+    def print_avg(self):
+        res = self.results 
+        total_length = []
+        total_hit = []
+        verification_time = []
+        segment_time = []
+        safe = 0
+        num_agent = 0
+        verification_time_later = []
+        for key, agent in res.items():
+            total_length.append(agent['total_length'])
+            total_hit.append(agent['num_hit'])
+            verification_time_later += agent['verification_time'][5:]
+            verification_time += agent['verification_time']
+            segment_time += agent['segment_time']
+            safe += agent['result']
+            num_agent += 1
+
+        total_length = np.array(total_length)
+        total_hit = np.array(total_hit) 
+        verification_time = np.array(verification_time)
+        segment_time = np.array(segment_time) 
+        sorted_verification_time = np.sort(verification_time)
+        sorted_len = len(sorted_verification_time)
+
+        num_obstacle = len(self.unsafeset_list)
+        print(f"|O|: {num_obstacle}")
+
+        num_wp = 0
+        for i in range(len(self.wp_list)):
+            num_wp += len(self.wp_list[i])
+        print(f"|S|: {num_wp}")
+
+        segments_sum = np.sum(total_length)
+        # print(f"total number of segments {segments_sum}")
+        cache_hit = np.sum(total_hit)
+        # print(f"total number of cache hit {cache_hit}")
+        Rc = segments_sum - cache_hit 
+        print(f"Rc {Rc}")
+
+        avg_verification_time = np.mean(verification_time)
+        print(f"ARt: {avg_verification_time}")
+        avg_verification_time_later = np.mean(verification_time_later)
+        # print(f"average verification time after first 5 steps {avg_verification_time_later}")
+        percent_verification_time = sorted_verification_time[int(sorted_len*0.9)]
+        print(f"MRt-90: {percent_verification_time}")
+        avg_verification_time_later = np.mean(verification_time_later)
+        max_verification_time = np.amax(verification_time)
+        print(f"MRt: {max_verification_time}")
+        max_verification_time_later = np.amax(verification_time_later)
+        # print(f"max verification time after first 5 steps {max_verification_time_later}")
+        avg_segment_time = np.mean(segment_time)
+        print(f"ASt: {avg_segment_time}")
+        print(f"{safe} agents safe, within {num_agent} agents")
+        max_segment_time = np.amax(segment_time)
+        # print(f"max segment time {max_segment_time}")
 
 def get_edge(edge_list, src_id):
     for edge in edge_list:
@@ -258,25 +319,33 @@ def get_waypoints(init_mode_id, edge_list, mode_list):
     return wp
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('-scenario',  metavar='path',
+                       type=str,
+                       help='the scenario file name',
+                       default="")
+    parser.add_argument('-Ts', 
+                        type = int, 
+                        help ="time bound for each plan segment",
+                        default = 15)
+    args = parser.parse_args()
+    Ts = args.Ts
     rospy.init_node('spawn_agents')
 
     wp_list = []
     unsafeset_list = []
-    if len(sys.argv) > 1:
-        fn = sys.argv[1]
+    if args.scenario != "":
+        fn = args.scenario
         f = open(fn, 'r')
         agent_data = json.load(f)
         num_agents = len(agent_data['agents'])
-        num_agents = 12
+
         # Handle unsafe sets
         unsafe_sets = agent_data['unsafeSet']
-        # for unsafe in unsafe_sets:
-        #     unsafeset_list.append(unsafe[1])
         unsafeset_list = unsafe_sets
+        
         # Handle waypoints
-        agent_idx_list = [0,2,4,6,8,10,12,14,16,5,9,15]
-        # agent_idx_list = [0,3,6,9,12,15]
-        for i in agent_idx_list:
+        for i in range(len(agent_data['agents'])):
             agent = agent_data['agents'][i]
             init_mode_id = agent['initialModeID']
             edge_list = agent['edge_list']
@@ -299,18 +368,6 @@ if __name__ == "__main__":
             ["Box", [[36.5,18,-100],[43,20,100]]],
         ]
 
-        # raw_wp_list = [
-        #     [0, 0, -5, 0],
-        #     [-5, 0, -10, 0],
-        #     [-10, 0, -10, 5],
-        #     [-10, 5, -15, 5],
-        #     [-15, 5, -15, 0],
-        #     [-15, 0, -15, -5]
-        # ]
-        # raw_unsafeset_list = [
-        #     [[-10, -5, -100],[0,-3,100]],
-        # ]
-        
         for i in range(num_agents):
             wp1 = []
             for j in range(len(raw_wp_list)):
@@ -325,8 +382,7 @@ if __name__ == "__main__":
                 unsafeset_list.append([raw_unsafeset_list[j][0],raw_unsafeset])
             wp_list.append(wp1)
 
-    # tmp = unsafeset_list
-    # unsafeset_list = []
+    # Set Unsafe Set
     set_unsafeset = rospy.ServiceProxy('set_unsafe', UnsafeSetSrv)
     obstacle_list = []
     for obstacle in unsafeset_list:
@@ -347,16 +403,15 @@ if __name__ == "__main__":
         obstacle_data.data = unsafe_array.flatten().tolist()
         obstacle_msg = Obstacle(obstacle = obstacle_data, obstacle_type = obstacle_type)
         obstacle_list.append(obstacle_msg)
-
     set_unsafeset(obstacle_list=obstacle_list)
 
-    # unsafeset_list = tmp
-    agent_data = AgentData(num_agents, unsafeset_list)
+    # Set each agents
+    agent_data = AgentData(num_agents, unsafeset_list, wp_list)
     visualize_process = threading.Thread(target = agent_data.visualize_agent_data)
     visualize_process.start()
 
+    # Create thread for each agents
     scenario_start_time = time.time()
-
     safety_checking_lock = threading.Lock()
     agent_process_list = []
     for i in range(num_agents):
@@ -364,32 +419,16 @@ if __name__ == "__main__":
             wp_list[i][0].mode_parameters[3] - wp_list[i][0].mode_parameters[1],
             wp_list[i][0].mode_parameters[2] - wp_list[i][0].mode_parameters[0]
         )
-        # x_init = np.random.uniform(wp_list[i][0].mode_parameters[0] - 1, wp_list[i][0].mode_parameters[0] + 1)
-        # y_init = np.random.uniform(wp_list[i][0].mode_parameters[1] - 1, wp_list[i][0].mode_parameters[1] + 1)
-        # theta_init = np.random.uniform(np.pi/2-0.5,np.pi/2+0.5)
         x_init = wp_list[i][0].mode_parameters[0]
         y_init = wp_list[i][0].mode_parameters[1]
         theta_init = theta
         init_state = [x_init, y_init, theta_init]
 
-        agent = AgentCar(i, wp_list[i], init_state, factor=5)
-
-        # x_init = wp_list[i][0].mode_parameters[0]
-        # y_init = wp_list[i][0].mode_parameters[1]
-        # z_init = wp_list[i][0].mode_parameters[2]
-        # vx_init = 0
-        # vy_init = 0
-        # vz_init = 0
-        # init_state = [x_init, y_init, z_init, vx_init, vy_init, vz_init]
-        # agent = AgentQuadrotor(i, wp_list[i], init_state)
-
-        # p = Process(target=agent.execute_plan)
-        # p.start()
+        agent = AgentCar(i, wp_list[i], init_state, factor=Ts/3)
         p = threading.Thread(target = agent.execute_plan)
         p.start()
         agent_process_list.append(p)
-        time.sleep(1)
-    
+        time.sleep(1)    
     for p in agent_process_list:
         p.join()
 

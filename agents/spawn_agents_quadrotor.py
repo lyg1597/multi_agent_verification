@@ -10,6 +10,7 @@ import json
 import pypoman as ppm
 import polytope as pc
 import pickle
+import argparse
 
 import rospy
 from std_msgs.msg import Float32MultiArray, MultiArrayDimension
@@ -22,7 +23,7 @@ from common.Waypoint import Waypoint
 
 
 class AgentData:
-    def __init__(self, num_agent, unsafeset_list):
+    def __init__(self, num_agent, unsafeset_list, wp_list):
         self.num_agent = num_agent
         self.agent_state_dict = {}
         for i in range(num_agent):
@@ -32,6 +33,8 @@ class AgentData:
             self.agent_plan_dict[i] = [[],[]]
         self.state_subscribers = self.create_subscriber()
         self.reachtube_subscriber = rospy.Subscriber('/verifier/reachtube', ReachtubeMsg,self.reachtube_handler, queue_size = 10)
+
+        self.wp_list = wp_list 
 
         self.tube_plan = {}
         self.tube = {}
@@ -250,6 +253,7 @@ class AgentData:
                 print(self.results)
                 # plt.savefig('./res_fig.png')
                 plt.close()
+                self.print_avg()
                 f = open('res.json', 'w+')
                 # self.generate_figure("./res_fig.png")
                 json.dump(self.results, f)
@@ -265,6 +269,63 @@ class AgentData:
                 print(60)
                 plt.close()
                 return
+
+    def print_avg(self):
+        res = self.results 
+        total_length = []
+        total_hit = []
+        verification_time = []
+        segment_time = []
+        safe = 0
+        num_agent = 0
+        verification_time_later = []
+        for key, agent in res.items():
+            total_length.append(agent['total_length'])
+            total_hit.append(agent['num_hit'])
+            verification_time_later += agent['verification_time'][5:]
+            verification_time += agent['verification_time']
+            segment_time += agent['segment_time']
+            safe += agent['result']
+            num_agent += 1
+
+        total_length = np.array(total_length)
+        total_hit = np.array(total_hit) 
+        verification_time = np.array(verification_time)
+        segment_time = np.array(segment_time) 
+        sorted_verification_time = np.sort(verification_time)
+        sorted_len = len(sorted_verification_time)
+
+        num_obstacle = len(self.unsafeset_list)
+        print(f"|O|: {num_obstacle}")
+
+        num_wp = 0
+        for i in range(len(self.wp_list)):
+            num_wp += len(self.wp_list[i])
+        print(f"|S|: {num_wp}")
+
+        segments_sum = np.sum(total_length)
+        # print(f"total number of segments {segments_sum}")
+        cache_hit = np.sum(total_hit)
+        # print(f"total number of cache hit {cache_hit}")
+        Rc = segments_sum - cache_hit 
+        print(f"Rc {Rc}")
+
+        avg_verification_time = np.mean(verification_time)
+        print(f"ARt: {avg_verification_time}")
+        avg_verification_time_later = np.mean(verification_time_later)
+        # print(f"average verification time after first 5 steps {avg_verification_time_later}")
+        percent_verification_time = sorted_verification_time[int(sorted_len*0.9)]
+        print(f"MRt-90: {percent_verification_time}")
+        avg_verification_time_later = np.mean(verification_time_later)
+        max_verification_time = np.amax(verification_time)
+        print(f"MRt: {max_verification_time}")
+        max_verification_time_later = np.amax(verification_time_later)
+        # print(f"max verification time after first 5 steps {max_verification_time_later}")
+        avg_segment_time = np.mean(segment_time)
+        print(f"ASt: {avg_segment_time}")
+        print(f"{safe} agents safe, within {num_agent} agents")
+        max_segment_time = np.amax(segment_time)
+        # print(f"max segment time {max_segment_time}")
 
 def get_edge(edge_list, src_id):
     for edge in edge_list:
@@ -283,12 +344,23 @@ def get_waypoints(init_mode_id, edge_list, mode_list):
     return wp
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('-scenario',  metavar='path',
+                       type=str,
+                       help='the scenario file name',
+                       default="")
+    parser.add_argument('-Ts', 
+                        type = int, 
+                        help ="time bound for each plan segment",
+                        default = 15)
+    args = parser.parse_args()
+    Ts = args.Ts
     rospy.init_node('spawn_agents')
 
     wp_list = []
     unsafeset_list = []
-    if len(sys.argv) > 1:
-        fn = sys.argv[1]
+    if args.scenario != "":
+        fn = args.scenario
         f = open(fn, 'r')
         agent_data = json.load(f)
         num_agents = len(agent_data['agents'])
@@ -391,7 +463,7 @@ if __name__ == "__main__":
     set_unsafeset(obstacle_list=obstacle_list)
 
     # unsafeset_list = tmp
-    agent_data = AgentData(num_agents, unsafeset_list)
+    agent_data = AgentData(num_agents, unsafeset_list, wp_list)
     visualize_process = threading.Thread(target = agent_data.visualize_agent_data)
     visualize_process.start()
 
