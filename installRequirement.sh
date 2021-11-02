@@ -10,7 +10,7 @@ sudo apt install python3-rosdep -y
 sudo rosdep init
 rosdep update
 
-sudo apt-get install python3-pip libgmp3-dev
+sudo apt-get install python3-pip libgmp3-dev -y
 
 sudo python3 -m pip install numpy
 sudo python3 -m pip install scipy 
