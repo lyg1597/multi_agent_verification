@@ -1,6 +1,6 @@
 This is the repeatability evaluation package for the tool paper "Swerve: Efficient Runtime Verification of Multi-Agent Systems Using Dynamical Symmetries and Cloud Computing" by: Yangge Li, Hussein Sibai, and Sayan Mitra, submitted to HSCC'22.
 
-The link to this artifact VM on figshare is: https://figshare.com/account/articles/16910812
+The link to this artifact VM on figshare is: https://figshare.com/articles/software/Swerve_Efficient_Runtime_Verification_of_Multi-Agent_Systems_Using_Dynamical_Symmetries_and_Cloud_Computing/16910812
 
 The link to this artifact VM on Google drive is: https://drive.google.com/file/d/1U46p9K_QHY8t4p8hdgajBnnEOYlgyrpQ/view?usp=sharing
 
@@ -16,17 +16,17 @@ Swerve consists of a Verification Server and a set of agents. To simplify the re
 
 The results of the experiments shown in Table 1 and 2 are stochastic and change between runs due to the following reasons:
 
-    1- Since each agent is running independently, the sequence of how different agents request the verification service is non-determinitic. This non deterministic can influence the response time for each agent's request. 
+    1- Since each agent is running independently, the sequence of how different agents request the verification service is non-determinitic. This non-determinism can influence the response time for each agent's request. 
 
-    2- The non-determinism in the sequence of verification request can also influence the number of calls to the reachability engine. 
+    2- The non-determinism in the order of verification requests can also influence the number of calls to the reachability engine. 
 
     3- The response time is machine specific. The machine specifications used for generating the results in the paper are shown at the end of this file.
 
-However, the vary in results will not influence the observations that we made in the paper. 
+However, the variation in the results will not influence the observations about the savings using symmetry and caching that we made in the paper.
 
 ###########################
 
-Dependencies: All dependencies for the repeatability package are already installed in the Virtual Machine
+Dependencies: All dependencies for the repeatability package are already installed on the Virtual Machine
 Ubuntu 20.04
 ROS Noetic
 Python 3.8 or newer versions
@@ -38,7 +38,7 @@ PyTorch
 pyvista
 matplotlib
 
-To replicate our experiments from the paper please run commands on our example files from the root directory of our local repo. The statics will appear in the terminal as the scenario finishes.
+To replicate our experiments from the paper please run the following commands on our example files from the root directory of our local repo. The statics will appear in the terminal as the scenario finishes.
 1. To generate Figure 1: 
     Change directory by running the following command:
         cd ~/Swerve
@@ -75,7 +75,7 @@ To replicate our experiments from the paper please run commands on our example f
                 Map4-3d-20(Q)   python3 agents/spawn_agents_quadrotor.py -scenario ./scenario_hscc/map4-3d-20.json 
                 Map4-3d-20(C&Q) python3 agents/spawn_agents_mixed.py -scenario ./scenario_hscc/map4-3d-20.json
             Note that while generating data for table 1, between running each of the above scenarios, we restart the verification server to reset the cache. 
-            Due to the complexity of the scenarios, Map3-2d-34, Map4-3d-20(Q), Map4-3d-20(C&Q) make take more than an hour to finish. 
+            Due to the complexity of the scenarios, Map3-2d-34, Map4-3d-20(Q), Map4-3d-20(C&Q) may take more than an hour to finish. 
 
     Swerve without symmetry caching: 
         Start three terminals,
@@ -106,7 +106,7 @@ To replicate our experiments from the paper please run commands on our example f
                 Map2-3d-17      python3 agents/spawn_agents_quadrotor.py -scenario ./scenario_hscc/map2-3d-17.json 
                 Map4-3d-20(Q)   python3 agents/spawn_agents_quadrotor.py -scenario ./scenario_hscc/map4-3d-20.json 
                 Map4-3d-20(C&Q) python3 agents/spawn_agents_mixed.py -scenario ./scenario_hscc/map4-3d-20.json
-            Due to the complexity of the scenarios, Map3-2d-34, Map4-3d-20(Q), Map4-3d-20(C&Q) make take more than an hour to finish. 
+            Due to the complexity of the scenarios, Map3-2d-34, Map4-3d-20(Q), Map4-3d-20(C&Q) may take more than an hour to finish. 
 
 2. For the experiment results in Table 2:
     Start three terminals,
