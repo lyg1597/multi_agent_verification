@@ -19,6 +19,9 @@ from common.Waypoint import Waypoint
 import argparse
 
 class AgentData:
+    """
+        The AgentData class mainly only the purpose of monitoring runtime data and visualization. 
+    """
     def __init__(self, num_agent, unsafeset_list, wp_list):
         self.num_agent = num_agent
         self.agent_state_dict = {}
@@ -333,6 +336,7 @@ if __name__ == "__main__":
     wp_list = []
     unsafeset_list = []
     if args.scenario != "":
+        # Load the input json file holding the plan and obstalces
         fn = args.scenario
         f = open(fn, 'r')
         agent_data = json.load(f)
@@ -380,7 +384,7 @@ if __name__ == "__main__":
                 unsafeset_list.append([raw_unsafeset_list[j][0],raw_unsafeset])
             wp_list.append(wp1)
 
-    # Set Unsafe Set
+    # Send the unsafe set to the verification server
     set_unsafeset = rospy.ServiceProxy('initialize', UnsafeSetSrv)
     obstacle_list = []
     for obstacle in unsafeset_list:
@@ -410,7 +414,6 @@ if __name__ == "__main__":
 
     # Create thread for each agents
     scenario_start_time = time.time()
-    safety_checking_lock = threading.Lock()
     agent_process_list = []
     for i in range(num_agents):
         theta = np.arctan2(

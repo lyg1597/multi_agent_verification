@@ -16,6 +16,9 @@ from std_msgs.msg import Int64
 from verification_msg.srv import VerifierSrv, VerifierSrvResponse
 
 class AgentCar3D:
+    """
+        AgentCar3D extend the AgentCar to a 3d model by introducing a zero z value
+    """
     def __init__(self, idx: int, waypoints: List[Waypoint], init_state: List[float], factor = 5):
         self.idx = idx
         self.waypoint_list: List[Waypoint] = waypoints
@@ -210,6 +213,10 @@ class AgentCar3D:
             return 'Unsafe'
 
     def execute_plan(self):
+        """
+            execute_plan(self)
+            Description: This function execute given plan for an agent
+        """
         print(f'Running agent {self.idx}')
         curr_init_set = self.init_state 
         all_trace = []
@@ -217,11 +224,13 @@ class AgentCar3D:
         i = 0
         j = 0
         
+        # Loop through each segment in the plan
         while i < len(self.waypoint_list):
             start_time = time.time()
             current_plan = self.waypoint_list[i]
             print(f'Start verifying plan for agent {self.idx}')
             verifier_start = time.time()
+            # Call the verifier to verify if the plan is safe
             res = self.verifier(
                 idx = self.idx, 
                 plan = current_plan, 
@@ -234,6 +243,7 @@ class AgentCar3D:
             self.verification_time.append(verification_time)
             print(f'Done verifying plan for agent {self.idx}, time {verification_time}')
 
+            # If the plan is not safe, wait and retry
             if res != 'Safe':
                 if j > self.retry_threshold:
                     print(f"agent{self.idx} plan unsafe")
@@ -246,6 +256,7 @@ class AgentCar3D:
             else:
                 j = 0
             
+            # If the plan is safe, drive the agent to execute the plan
             trace = self.TC_Simulate(current_plan.mode_parameters, curr_init_set, current_plan.time_bound)
             # plt.plot(trace[:,1], trace[:,2])
             # plt.plot([current_plan.mode_parameters[0], current_plan.mode_parameters[2]], [current_plan.mode_parameters[1], current_plan.mode_parameters[3]], 'r')

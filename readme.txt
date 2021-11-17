@@ -26,6 +26,8 @@ However, the variation in the results will not influence the observations about 
 
 ###########################
 
+The virtual machine runs in VirtualBox. To run the virtual machine, the Oracle VM VirtualBox Extension Pack is required. 
+
 Dependencies: All dependencies for the repeatability package are already installed on the Virtual Machine
 Ubuntu 20.04
 ROS Noetic
