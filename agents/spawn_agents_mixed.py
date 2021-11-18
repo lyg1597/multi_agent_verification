@@ -248,7 +248,7 @@ class AgentData:
                             self.plot_tube(ax, tube, from_cache)
                             self.plotted_tube[idx] = self.tube_plan[idx][-1]
                     
-            plt.pause(0.000001)
+            # plt.pause(0.000001)
             i+=1
             time.sleep(0.2)
             if np.all(self.done_list): 
@@ -365,6 +365,7 @@ if __name__ == "__main__":
     wp_list = []
     unsafeset_list = []
     if args.scenario != "":
+        # Load the input json file holding the plan and obstalces
         fn = args.scenario
         f = open(fn, 'r')
         agent_data = json.load(f)
@@ -373,7 +374,7 @@ if __name__ == "__main__":
         # Handle unsafe sets
         unsafe_sets = agent_data['unsafeSet']
         unsafeset_list = unsafe_sets
-        
+
         # Handle waypoints
         for i in range(num_agents):
             agent = agent_data['agents'][i]
@@ -384,7 +385,7 @@ if __name__ == "__main__":
             wp_list.append(wp)
     else: 
         num_agents = 10
-
+        
         raw_wp_list = [
             [20.0, 5.0, 0, 20.0, 10.0, 0],
             [20.0, 10.0, 0, 20.0, 15.0, 0],
@@ -411,6 +412,9 @@ if __name__ == "__main__":
                 raw_unsafeset[1][0] += i*12
                 unsafeset_list.append([raw_unsafeset_list[j][0],raw_unsafeset])
             wp_list.append(wp1)
+
+    # tmp = unsafeset_list
+    # unsafeset_list = []
 
     # Send the unsafe set to the verification server
     set_unsafeset = rospy.ServiceProxy('initialize', UnsafeSetSrv)
@@ -448,8 +452,23 @@ if __name__ == "__main__":
 
     scenario_start_time = time.time()
 
+    safety_checking_lock = threading.Lock()
     agent_process_list = []
+    # Create thread for each agents
     for i in range(num_agents):
+        # theta = np.arctan2(
+        #     wp_list[i][0].mode_parameters[3] - wp_list[i][0].mode_parameters[1],
+        #     wp_list[i][0].mode_parameters[2] - wp_list[i][0].mode_parameters[0]
+        # )
+        # # x_init = np.random.uniform(wp_list[i][0].mode_parameters[0] - 1, wp_list[i][0].mode_parameters[0] + 1)
+        # # y_init = np.random.uniform(wp_list[i][0].mode_parameters[1] - 1, wp_list[i][0].mode_parameters[1] + 1)
+        # # theta_init = np.random.uniform(np.pi/2-0.5,np.pi/2+0.5)
+        # x_init = wp_list[i][0].mode_parameters[0]
+        # y_init = wp_list[i][0].mode_parameters[1]
+        # theta_init = theta
+        # init_state = [x_init, y_init, theta_init]
+
+        # agent = AgentCar(i, wp_list[i], init_state)
         if i < 5:
             x_init = wp_list[i][0].mode_parameters[0]
             y_init = wp_list[i][0].mode_parameters[1]

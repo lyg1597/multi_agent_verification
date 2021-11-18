@@ -227,7 +227,7 @@ class AgentData:
                             self.plot_tube(ax, tube, from_cache)
                             self.plotted_tube[idx] = self.tube_plan[idx][-1]
                     
-            plt.pause(0.000001)
+            # plt.pause(0.000001)
             i+=1
             time.sleep(0.2)
             if np.all(self.done_list): 
@@ -414,6 +414,7 @@ if __name__ == "__main__":
 
     # Create thread for each agents
     scenario_start_time = time.time()
+    safety_checking_lock = threading.Lock()
     agent_process_list = []
     for i in range(num_agents):
         theta = np.arctan2(

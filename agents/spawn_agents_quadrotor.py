@@ -23,9 +23,6 @@ from common.Waypoint import Waypoint
 
 
 class AgentData:
-    """
-        The AgentData class mainly only the purpose of monitoring runtime data and visualization. 
-    """
     def __init__(self, num_agent, unsafeset_list, wp_list):
         self.num_agent = num_agent
         self.agent_state_dict = {}
@@ -248,7 +245,7 @@ class AgentData:
                             self.plot_tube(ax, tube, from_cache)
                             self.plotted_tube[idx] = self.tube_plan[idx][-1]
                     
-            plt.pause(0.000001)
+            # plt.pause(0.000001)
             i+=1
             time.sleep(0.2)
             if np.all(self.done_list): 
@@ -367,11 +364,11 @@ if __name__ == "__main__":
         f = open(fn, 'r')
         agent_data = json.load(f)
         num_agents = len(agent_data['agents'])
-
         # Handle unsafe sets
         unsafe_sets = agent_data['unsafeSet']
+        # for unsafe in unsafe_sets:
+        #     unsafeset_list.append(unsafe[1])
         unsafeset_list = unsafe_sets
-
         # Handle waypoints
         for i in range(num_agents):
             agent = agent_data['agents'][i]
@@ -382,6 +379,20 @@ if __name__ == "__main__":
             wp_list.append(wp)
     else: 
         num_agents = 50
+        
+        # raw_wp_list = [
+        #     [20.0, 5.0, 20.0, 10.0],
+        #     [20.0, 10.0, 20.0, 15.0],
+        #     [20.0, 15.0, 25.0, 15.0],
+        #     [25.0, 15.0, 30.0, 15.0],
+        #     [30.0, 15.0, 35.0, 15.0],
+        #     [35.0, 15.0, 35.0, 20.0],
+        # ]
+        # raw_unsafeset_list = [
+        #     ["Box", [[23,5,-100],[27,12,100]]],
+        #     ["Box", [[35.8,18,-100],[43,20,100]]],
+        # ]
+
         raw_wp_list = [
             [20.0, 5.0, 0, 20.0, 10.0, 0],
             [20.0, 10.0, 0, 20.0, 15.0, 0],
@@ -394,6 +405,18 @@ if __name__ == "__main__":
             ["Box", [[23,5,-100,-100,-100,-100],[27,12,100,100,100,100]]],
             ["Box", [[36.5,18,-100,-100,-100,-100],[43,20,100,100,100,100]]],
         ]
+
+        # raw_wp_list = [
+        #     [0, 0, -5, 0],
+        #     [-5, 0, -10, 0],
+        #     [-10, 0, -10, 5],
+        #     [-10, 5, -15, 5],
+        #     [-15, 5, -15, 0],
+        #     [-15, 0, -15, -5]
+        # ]
+        # raw_unsafeset_list = [
+        #     [[-10, -5, -100],[0,-3,100]],
+        # ]
         
         for i in range(num_agents):
             wp1 = []
@@ -409,7 +432,8 @@ if __name__ == "__main__":
                 unsafeset_list.append([raw_unsafeset_list[j][0],raw_unsafeset])
             wp_list.append(wp1)
 
-    # Send the unsafe set to the verification server
+    # tmp = unsafeset_list
+    # unsafeset_list = []
     set_unsafeset = rospy.ServiceProxy('initialize', UnsafeSetSrv)
     obstacle_list = []
     for obstacle in unsafeset_list:
@@ -438,15 +462,30 @@ if __name__ == "__main__":
 
     set_unsafeset(obstacle_list=obstacle_list)
 
+    # unsafeset_list = tmp
     agent_data = AgentData(num_agents, unsafeset_list, wp_list)
     visualize_process = threading.Thread(target = agent_data.visualize_agent_data)
     visualize_process.start()
 
     scenario_start_time = time.time()
 
-    # Creating thread for each agents
+    safety_checking_lock = threading.Lock()
     agent_process_list = []
     for i in range(num_agents):
+        # theta = np.arctan2(
+        #     wp_list[i][0].mode_parameters[3] - wp_list[i][0].mode_parameters[1],
+        #     wp_list[i][0].mode_parameters[2] - wp_list[i][0].mode_parameters[0]
+        # )
+        # # x_init = np.random.uniform(wp_list[i][0].mode_parameters[0] - 1, wp_list[i][0].mode_parameters[0] + 1)
+        # # y_init = np.random.uniform(wp_list[i][0].mode_parameters[1] - 1, wp_list[i][0].mode_parameters[1] + 1)
+        # # theta_init = np.random.uniform(np.pi/2-0.5,np.pi/2+0.5)
+        # x_init = wp_list[i][0].mode_parameters[0]
+        # y_init = wp_list[i][0].mode_parameters[1]
+        # theta_init = theta
+        # init_state = [x_init, y_init, theta_init]
+
+        # agent = AgentCar(i, wp_list[i], init_state)
+
         x_init = wp_list[i][0].mode_parameters[0]
         y_init = wp_list[i][0].mode_parameters[1]
         z_init = wp_list[i][0].mode_parameters[2]
@@ -456,6 +495,8 @@ if __name__ == "__main__":
         init_state = [x_init, y_init, z_init, vx_init, vy_init, vz_init]
         agent = AgentQuadrotor(i, wp_list[i], init_state)
 
+        # p = Process(target=agent.execute_plan)
+        # p.start()
         p = threading.Thread(target = agent.execute_plan)
         p.start()
         agent_process_list.append(p)
