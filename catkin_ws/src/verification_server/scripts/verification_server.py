@@ -124,9 +124,9 @@ class ReachTubeUnion():
         else:
             return None
 
-    def split2(self, initset_virtual):
+    def split(self, initset_virtual):
         """
-            split2(self, initset_virtual)
+            split(self, initset_virtual)
             Description: Decompose the union of reachable sets into two subsets
         """
         if self.num_tubes <= 1:
@@ -395,7 +395,7 @@ class TubeCache:
                 closest_center_idx = i
                 closest_center_val = dist
 
-        union1, union2, res = self.cache_dict[key][closest_center_idx].split2(initset_virtual)
+        union1, union2, res = self.cache_dict[key][closest_center_idx].split(initset_virtual)
         if not res:
             if union2 is not None:
                 self.cache_dict[key].append(union2)

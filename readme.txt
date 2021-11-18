@@ -6,6 +6,8 @@ The link to this artifact VM on Google drive is: https://drive.google.com/file/d
 
 The link to the source code git repository for Swerve is: https://github.com/lyg1597/multi_agent_verification/tree/hscc_artifact
 
+The artifact is a virtual machine runs in VirtualBox. To run the virtual machine, the Oracle VM VirtualBox Extension Pack is required. 
+
 Swerve with its source codes is provided with this VM. There is no tool or library that should be downloaded before usage, and all tools can be used in this VM without an internet connection. The root password of the VM is HSCC2022.
 
 ###########################
@@ -25,8 +27,6 @@ The results of the experiments shown in Table 1 and 2 are stochastic and change 
 However, the variation in the results will not influence the observations about the savings using symmetry and caching that we made in the paper.
 
 ###########################
-
-The virtual machine runs in VirtualBox. To run the virtual machine, the Oracle VM VirtualBox Extension Pack is required. 
 
 Dependencies: All dependencies for the repeatability package are already installed on the Virtual Machine
 Ubuntu 20.04
