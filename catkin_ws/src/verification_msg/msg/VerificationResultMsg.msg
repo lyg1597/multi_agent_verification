@@ -10,4 +10,4 @@ float32[] segment_time
 int32[] num_refine 
 float32[] refine_time  
 float32[] server_verify_time 
-        
+int32 num_collision

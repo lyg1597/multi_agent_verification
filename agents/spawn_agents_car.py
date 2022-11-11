@@ -65,6 +65,7 @@ class AgentData:
         num_refine = data.num_refine
         refine_time = data.refine_time
         server_verify_time = data.server_verify_time
+        num_collision = data.num_collision
         self.results[idx] = {
             "num_hit":num_hit,
             "total_length":total_length,
@@ -76,6 +77,7 @@ class AgentData:
             "num_refine":num_refine,
             "refine_time":refine_time,
             "server_verify_time":server_verify_time,
+            "num_unsafe": num_collision,
             "result":result
         }
         self.done_list[idx] = True

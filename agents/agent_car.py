@@ -39,6 +39,7 @@ class AgentCar:
         self.server_verify_time = []
         self.retry_threshold = 10
         self.factor = factor
+        self.num_collision = 0
 
     def dynamics(self, t, state, mode_parameters):
         v = mode_parameters[2]
@@ -239,6 +240,8 @@ class AgentCar:
 
             # If the plan is not safe, wait and retry
             if res != 'Safe':
+                if j == 0:
+                    self.num_collision += 1
                 if j > self.retry_threshold:
                     print(f"agent{self.idx} plan unsafe")
                     self.stop_agent()
@@ -277,6 +280,7 @@ class AgentCar:
         result.num_refine = self.num_refine
         result.refine_time = self.refine_time 
         result.server_verify_time = self.server_verify_time
+        result.num_collision = self.num_collision
         self.result_publisher.publish(result)
 
         print(f'Done agent{self.idx} Verification Time', self.verification_time)
